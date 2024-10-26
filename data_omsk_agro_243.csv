@@ -1,86 +1,86 @@
-id,latitude,longitude,zone,agroclimatic,district,price,area,ownership,permitted,actual,crop_yield,capital_distance,elevator_distance,paved_road,shape,is_marked,coast,offer_date,is_brokerage,is_single,electricity,gas
-Id_01,56.9924060368397,74.2963057280811,north,north_zone,Тарский,1000000,145523,private,agricultural,forest,55,315,299,1,simple,1,1,45438,0,0,0,0
-Id_02,55.7827994812668,72.7953927901438,north,north_forest_steppe,Тюкалинский,250000,107000,private,agricultural,unknown,46,101,85,0,unknown,0,0,45429,0,unknown,0,0
-Id_03,55.6303914748802,72.0729945615213,north,north_forest_steppe,Тюкалинский,1200000,400000,share,agricultural,unknown,46,155,57,0,unknown,0,0,45427,0,unknown,0,0
-Id_04,55.8409721486735,72.7671182362492,north,north_forest_steppe,Тюкалинский,300000,354000,unknown,agricultural,unknown,46,111,94,0,unknown,0,1,45432,1,unknown,0,0
-Id_05,56.2708097688236,72.3279760239315,north,north_forest_steppe,Тюкалинский,3000000,384700,share,agricultural,crop_fodder,46,186,138,0,unknown,0,1,45413,0,unknown,0,0
-Id_06,56.5330314527908,73.4666356052274,north,north_forest_steppe,Колосовский,750000,603000,share,agricultural,unknown,40,224,205,0,complex,1,0,45469,0,0,0,0
-Id_07,56.5884374059587,73.1773389687097,north,north_forest_steppe,Колосовский,200000,408000,share,agricultural,unknown,40,233,224,0,unknown,0,0,45474,0,unknown,0,0
-Id_08,56.2272791792256,72.9026692166118,north,north_forest_steppe,Колосовский,100000,438000,private,agricultural,unknown,40,161,151,0,unknown,0,0,45412,0,unknown,0,0
-Id_09,55.3453516946922,71.2594513467615,north,north_forest_steppe,Называевский,800000,250000,unknown,agricultural,unknown,40,190,32,1,unknown,0,0,45432,0,unknown,0,0
-id_10,55.3761283484659,71.3753956073577,north,north_forest_steppe,Называевский,440000,269000,share,agricultural,crop_fodder,40,187,23,0,unknown,0,0,45489,0,unknown,0,0
-id_11,55.6013893508739,71.5537265290926,north,north_forest_steppe,Называевский,350000,400000,share,agricultural,unknown,40,175,22,1,complex,1,0,45484,0,1,0,0
-id_12,55.6767206651418,71.2637067028376,north,north_forest_steppe,Называевский,300000,2535191,share,agricultural,unknown,40,207,16,0,complex,1,0,45413,0,0,0,0
-id_13,55.676073847689,72.8867583515645,north,north_forest_steppe,Саргатский,300000,512946,share,agricultural,unknown,50,86,71,0,complex,1,0,45436,1,1,0,0
-id_14,55.631791966787,73.4341354769769,north,north_forest_steppe,Саргатский,380000,190000,share,agricultural,unknown,50,133,114,0,unknown,0,0,45414,0,unknown,0,0
-id_15,55.245766748815,74.095472887347,north,north_forest_steppe,Горьковский,300000,120000,private,agricultural,crop,59,62,36,0,simple,1,0,45423,0,1,0,0
-id_16,55.5959534830798,73.7715847941343,north,north_forest_steppe,Горьковский,255000,150000,private,agricultural,crop,59,77,93,0,complex,1,0,45428,0,1,0,0
-id_17,55.3984498141848,74.4085337627497,north,north_forest_steppe,Горьковский,110000,100000,share,agricultural,crop,59,90,51,0,unknown,0,0,45436,0,unknown,0,0
-id_18,54.830150206452,73.0225644479969,north,north_forest_steppe,Горьковский,590000,110000,unknown,agricultural,crop_fodder,59,64,115,0,unknown,0,0,45438,1,unknown,0,0
-id_19,55.3802588267586,74.4614581255326,north,north_forest_steppe,Горьковский,1804270,1300000,private,agricultural,unknown,59,85,46,0,unknown,0,0,45434,0,unknown,0,0
-id_20,57.6782314368914,71.282050552102,north,north_zone,Усть-Ишимский,1500000,114100,share,subsidiary,fodder,50,515,258,0,unknown,0,0,45440,0,unknown,0,0
-id_21,55.9536812191335,74.4507991920671,north,north_forest_steppe,Большереченский,150000,160000,private,agricultural,unknown,54,166,150,0,unknown,0,0,45446,0,unknown,0,0
-id_22,55.7241222008049,74.4172013104868,north,north_forest_steppe,Горьковский,500000,140000,share,agricultural,crop_fodder,59,100,101,0,unknown,0,0,45480,0,unknown,0,0
-id_23,56.0434192024144,71.4381264800229,north,north_forest_steppe,Крутинский,8000000,2300000,private,agricultural,unknown,49,190,67,1,simple,1,0,45443,0,1,0,0
-id_24,55.7978484953013,70.8054351378755,north,north_forest_steppe,Называевский,400000,460000,unknown,agricultural,haying,40,238,46,0,unknown,0,0,45445,0,unknown,0,0
-id_25,55.9549435403882,71.7390210110615,north,north_forest_steppe,Тюкалинский,500000,432000,unknown,subsidiary,crop_fodder,46,158,80,1,simple,0,0,45430,0,unknown,0,0
-id_26,55.4659479755692,73.8856014616015,north,north_forest_steppe,Горьковский,3000000,86000,private,subsidiary,unknown,59,50,56,1,unknown,1,0,45497,0,1,0,0
-id_27,55.7213934774285,72.6622611754975,north,north_forest_steppe,Тюкалинский,5100000,1460000,private,farm,crop_fodder,46,102,85,0,unknown,0,0,45491,1,unknown,0,0
-id_28,55.406903523662,73.0326717206069,north,north_forest_steppe,Саргатский,800000,336000,unknown,agricultural,pasture_fodder,50,50,44,0,unknown,0,1,45496,0,unknown,0,0
-id_29,56.3666227326943,74.5484779755126,north,north_forest_steppe,Большереченский,125000,141000,private,agricultural,unknown,54,232,215,1,complex,1,0,45501,0,1,0,0
-id_30,56.5760836878255,75.8665748905532,north,north_forest_steppe,Муромцевский,10100000,11217757,private,agricultural,unknown,50,256,259,0,complex,1,0,45493,0,1,0,0
-id_31,54.769817109004,71.1888667094953,south,south_forest_steppe,Исилькульский,400000,130000,share,agricultural,crop_fodder,71,148,22,0,unknown,0,0,45493,0,unknown,0,0
-id_32,54.6874512849548,71.4025247385302,south,south_forest_steppe,Исилькульский,250000,130000,share,agricultural,unknown,71,162,34,0,unknown,0,0,45479,0,unknown,0,0
-id_33,54.737346892377,71.3188187760124,south,south_forest_steppe,Исилькульский,500000,130000,share,agricultural,unknown,71,159,31,0,unknown,0,0,45474,0,unknown,0,0
-id_34,54.7193206738141,71.78814489557,south,south_forest_steppe,Москаленский,85000,147000,private,agricultural,unknown,68,126,33,1,simple,1,0,45491,1,1,0,0
-id_35,54.9953373336528,71.4712693101646,south,south_forest_steppe,Москаленский,600000,264000,unknown,agricultural,haying,68,104,33,1,unknown,1,0,45483,0,unknown,0,0
-id_36,55.1853189429826,72.3403645837692,south,south_forest_steppe,Любинский,4200000,3793049,private,agricultural,no,66,81,27,0,complex,1,0,45483,1,0,0,0
-id_37,55.42188583351,72.9677176770375,south,south_forest_steppe,Любинский,280000,100000,share,agricultural,crop_fodder,66,56,40,0,unknown,0,0,45481,0,unknown,0,0
-id_38,55.5613710371341,72.497452441759,south,south_forest_steppe,Любинский,2000000,360000,unknown,agricultural,unknown,66,87,47,0,unknown,0,0,45503,0,unknown,0,0
-id_39,55.1273804966104,74.2365632612991,south,south_forest_steppe,Кормиловский,250000,25800,share,agricultural,unknown,67,49,25,0,unknown,0,0,45471,0,unknown,0,0
-id_40,54.8511726010784,74.5696415280587,south,south_forest_steppe,Калачинский,650000,214029,private,agricultural,crop_fodder,69,86,23,1,simple,1,0,45492,0,1,0,0
-id_41,54.8606279996642,74.7505073682686,south,steppe,Оконешниковский,4550000,930000,share,agricultural,crop_fodder,56,110,38,0,complex,1,0,45484,0,1,0,0
-id_42,54.6762024244125,74.9450086012144,south,steppe,Оконешниковский,3000000,650000,unknown,agricultural,crop_fodder,56,147,71,0,unknown,0,0,45490,0,unknown,0,0
-id_43,54.2458066726158,74.53959869445,south,steppe,Нововаршавский,700000,220000,share,agricultural,crop_fodder,64,144,21,0,unknown,0,0,45474,0,unknown,0,0
-id_44,54.6249289203789,73.5252585435197,south,steppe,Таврический,1350000,136000,private,agricultural,haying,70,32,37,0,simple,1,0,45471,0,1,0,0
-id_45,54.4871924531257,74.3053161695556,south,steppe,Таврический,800000,117500,private,agricultural,crop_fodder,70,102,29,1,simple,1,0,45485,0,1,0,0
-id_46,54.6220618571708,72.4823970877652,south,steppe,Шербакульский,1500000,141000,unknown,agricultural,wheat,72,65,53,0,simple,0,1,45489,0,unknown,0,0
-id_47,54.4859181867286,72.5900839808365,south,steppe,Шербакульский,1500000,150000,private,subsidiary,crop_fodder,72,111,67,0,unknown,0,0,45486,0,unknown,0,0
-id_48,54.4543262741035,71.331010753247,south,steppe,Полтавский,379000,190000,share,agricultural,unknown,71,186,38,0,unknown,0,0,45493,0,unknown,0,0
-id_49,54.4861703089546,71.2730334639485,south,steppe,Полтавский,800000,319987,share,agricultural,crop_fodder,71,187,41,1,simple,1,0,45479,0,1,0,0
-id_50,54.5270269414527,71.3350821232982,south,steppe,Полтавский,400000,210000,unknown,agricultural,unknown,71,186,38,0,unknown,0,0,45468,0,unknown,0,0
-id_51,54.7219904909558,72.985117871854,south,south_forest_steppe,Азовский,1490000,82245,private,agricultural,crop_fodder,73,35,41,1,complex,1,0,45495,0,1,0,0
-id_52,54.8728534778173,73.0852735604034,south,south_forest_steppe,Азовский,1500000,70000,private,agricultural,crop_fodder,73,17,22,1,simple,1,0,45477,0,1,0,0
-id_53,55.110962043632,73.719347339558,south,south_forest_steppe,Омский,2099000,260000,unknown,agricultural,crop_fodder,70,10,20,0,unknown,0,0,45492,1,unknown,0,0
-id_54,55.3471769513435,73.2032667734655,south,south_forest_steppe,Омский,3500000,153091,private,agricultural,crop_fodder,70,33,51,0,simple,1,0,45489,0,1,0,0
-id_55,54.8896709452938,73.2105572804354,south,south_forest_steppe,Омский,1500000,32582,private,agricultural,crop_fodder,70,12,7,1,simple,1,0,45488,0,1,1,0
-id_56,54.7848972219828,73.6921255057896,south,south_forest_steppe,Омский,3000000,180000,unknown,agricultural,crop_fodder,70,18,36,0,unknown,0,0,45486,1,unknown,0,0
-id_57,54.8115339926748,73.6633606542151,south,south_forest_steppe,Омский,2400000,92000,private,agricultural,crop_fodder,70,18,36,0,simple,1,0,45492,0,1,0,0
-id_58,54.9094340556417,73.6269931034498,south,south_forest_steppe,Омский,2500000,62524,private,agricultural,crop_fodder,70,10,31,1,simple,1,0,45485,0,1,0,0
-id_59,54.8979837537939,73.1897555903399,south,south_forest_steppe,Омский,500000,19500,share,agricultural,crop_fodder,70,7,9,0,simple,1,0,45488,1,1,0,0
-id_60,55.1004161212903,73.3664493102884,south,south_forest_steppe,Омский,2500000,96000,share,agricultural,crop_fodder,70,7,15,1,simple,1,0,45483,0,1,1,0
-id_61,54.8694685394652,73.1548749258198,south,south_forest_steppe,Омский,7000000,60850,private,agricultural,crop_fodder,70,19,24,1,simple,1,0,45502,1,1,1,0
-id_62,55.1309681152558,73.1251019716741,south,south_forest_steppe,Омский,1200000,48199,private,agricultural,crop_fodder,70,24,36,1,simple,1,0,45502,0,1,0,0
-id_63,55.2959701778173,73.112312998688,south,south_forest_steppe,Омский,2500000,73900,private,agricultural,crop_fodder,70,26,44,0,simple,1,0,45501,0,1,0,0
-id_64,54.8986885224507,73.2139389018124,south,south_forest_steppe,Омский,2000000,32362,private,agricultural,crop_fodder,70,11,6,1,simple,1,0,45499,0,1,1,0
-id_65,55.2104951463992,73.4948482635993,south,south_forest_steppe,Омский,1100000,69998,private,agricultural,crop_fodder,70,20,24,0,complex,1,0,45493,1,1,1,1
-id_66,55.211851920751,73.4982442333606,south,south_forest_steppe,Омский,1050000,44000,private,agricultural,crop_fodder,70,20,24,0,complex,1,0,45504,1,1,1,1
-id_67,55.2055681894953,73.4953613177069,south,south_forest_steppe,Омский,1000000,95995,private,agricultural,crop_fodder,70,20,23,1,simple,1,0,45479,0,1,1,0
-id_68,55.3884554543638,73.210195942378,south,south_forest_steppe,Омский,1100000,27999,private,agricultural,crop_fodder,70,68,81,0,simple,1,1,45491,1,1,0,0
-id_69,54.8031167939986,73.7040412070723,south,south_forest_steppe,Омский,3900000,69847,private,agricultural,crop_fodder,70,31,52,0,simple,1,0,45484,0,1,0,0
-id_70,55.0566353766385,73.1004542323814,south,south_forest_steppe,Омский,2500000,50000,private,farm,crop_fodder,70,5,20,0,unknown,0,0,45482,0,unknown,0,0
-id_71,55.4115748308498,73.265069881537,south,south_forest_steppe,Омский,1000000,147899,private,agricultural,crop_fodder,70,35,53,0,simple,1,1,45479,0,1,1,0
-id_72,55.0778097361402,73.5845919367538,south,south_forest_steppe,Омский,750000,28000,private,agricultural,crop_fodder,70,6,16,0,simple,1,0,45478,0,1,0,0
-id_73,55.2225754646228,73.315866572912,south,south_forest_steppe,Омский,490000,68988,private,agricultural,crop_fodder,70,12,31,0,simple,1,0,45475,0,1,0,0
-id_74,54.9688731279926,73.6041490606408,south,south_forest_steppe,Омский,1000000,9897,private,agricultural,crop_fodder,70,0,25,1,simple,1,0,45484,0,1,0,0
-id_75,55.2934010761892,73.2769211895803,south,south_forest_steppe,Омский,900000,156000,private,agricultural,unknown,70,23,42,1,complex,1,0,45475,0,1,0,0
-id_76,55.4004686509665,73.2092413083651,south,south_forest_steppe,Омский,10000000,1876153,share,agricultural,crop_fodder,70,74,58,0,complex,1,1,45489,0,1,0,0
-id_77,54.9164639206267,73.2301131489293,south,south_forest_steppe,Омский,13000000,126431,private,agricultural,crop_fodder,70,4,1.5,1,simple,1,0,45491,1,1,1,1
-id_78,55.2480854162147,73.1795288100078,south,south_forest_steppe,Омский,250000,27300,private,agricultural,unknown,70,42,42,0,simple,1,1,45504,1,1,0,0
-id_79,55.1667250730861,73.3585164586706,south,south_forest_steppe,Омский,350000,12128,private,agricultural,crop_fodder,70,12,29,0,simple,1,0,45499,1,1,0,0
-id_80,55.2160072982935,73.4619028184221,south,south_forest_steppe,Омский,350000,22427,private,agricultural,crop_fodder,70,19,24,0,simple,1,0,45499,1,1,0,0
-id_81,55.1933353367564,73.5085130470484,south,south_forest_steppe,Омский,350000,44025,private,agricultural,unknown,70,19,24.5,0,simple,1,0,45499,1,1,0,0
-id_82,55.0711511729475,73.1219425235005,south,south_forest_steppe,Омский,1200000,48200,private,agricultural,crop_fodder,70,11,26,0,complex,1,0,45497,1,1,0,0
-id_83,55.0246132121688,73.0633727150179,south,south_forest_steppe,Омский,7000000,143321,private,agricultural,crop_fodder,70,8,23,1,simple,1,0,45505,1,1,0,0
-id_84,55.1651208290229,73.3813085610925,south,south_forest_steppe,Омский,1600000,48000,private,agricultural,crop_fodder,70,13,25,1,simple,1,0,45499,1,1,1,1
-id_85,54.8041377353214,73.6193547144871,south,south_forest_steppe,Омский,5600000,91415,private,agricultural,crop_fodder,70,16,34,1,complex,1,0,45483,1,1,0,0
+id,latitude,longitude,climate_zone,agricultural_zone,district,price,area,ownership,permitted,actual,crop_yield,capital_distance,elevator_distance,paved_road,shape,is_marked,coast,offer_date,is_brokerage,is_single,electricity,gas
+Id_01,56.9924060368397,74.2963057280811,north,north_zone,Тарский район,1000000,145523,private,agricultural,forest,55,315,299,1,simple,1,1,45438,0,0,0,0
+Id_02,55.7827994812668,72.7953927901438,north,north_forest_steppe,Тюкалинский район,250000,107000,private,agricultural,unknown,46,101,85,0,unknown,0,0,45429,0,unknown,0,0
+Id_03,55.6303914748802,72.0729945615213,north,north_forest_steppe,Тюкалинский район,1200000,400000,share,agricultural,unknown,46,155,57,0,unknown,0,0,45427,0,unknown,0,0
+Id_04,55.8409721486735,72.7671182362492,north,north_forest_steppe,Тюкалинский район,300000,354000,unknown,agricultural,unknown,46,111,94,0,unknown,0,1,45432,1,unknown,0,0
+Id_05,56.2708097688236,72.3279760239315,north,north_forest_steppe,Тюкалинский район,3000000,384700,share,agricultural,crop_fodder,46,186,138,0,unknown,0,1,45413,0,unknown,0,0
+Id_06,56.5330314527908,73.4666356052274,north,north_forest_steppe,Колосовский район,750000,603000,share,agricultural,unknown,40,224,205,0,complex,1,0,45469,0,0,0,0
+Id_07,56.5884374059587,73.1773389687097,north,north_forest_steppe,Колосовский район,200000,408000,share,agricultural,unknown,40,233,224,0,unknown,0,0,45474,0,unknown,0,0
+Id_08,56.2272791792256,72.9026692166118,north,north_forest_steppe,Колосовский район,100000,438000,private,agricultural,unknown,40,161,151,0,unknown,0,0,45412,0,unknown,0,0
+Id_09,55.3453516946922,71.2594513467615,north,north_forest_steppe,Называевский район,800000,250000,unknown,agricultural,unknown,40,190,32,1,unknown,0,0,45432,0,unknown,0,0
+id_10,55.3761283484659,71.3753956073577,north,north_forest_steppe,Называевский район,440000,269000,share,agricultural,crop_fodder,40,187,23,0,unknown,0,0,45489,0,unknown,0,0
+id_11,55.6013893508739,71.5537265290926,north,north_forest_steppe,Называевский район,350000,400000,share,agricultural,unknown,40,175,22,1,complex,1,0,45484,0,1,0,0
+id_12,55.6767206651418,71.2637067028376,north,north_forest_steppe,Называевский район,300000,2535191,share,agricultural,unknown,40,207,16,0,complex,1,0,45413,0,0,0,0
+id_13,55.676073847689,72.8867583515645,north,north_forest_steppe,Саргатский район,300000,512946,share,agricultural,unknown,50,86,71,0,complex,1,0,45436,1,1,0,0
+id_14,55.631791966787,73.4341354769769,north,north_forest_steppe,Саргатский район,380000,190000,share,agricultural,unknown,50,133,114,0,unknown,0,0,45414,0,unknown,0,0
+id_15,55.245766748815,74.095472887347,north,north_forest_steppe,Горьковский район,300000,120000,private,agricultural,crop,59,62,36,0,simple,1,0,45423,0,1,0,0
+id_16,55.5959534830798,73.7715847941343,north,north_forest_steppe,Горьковский район,255000,150000,private,agricultural,crop,59,77,93,0,complex,1,0,45428,0,1,0,0
+id_17,55.3984498141848,74.4085337627497,north,north_forest_steppe,Горьковский район,110000,100000,share,agricultural,crop,59,90,51,0,unknown,0,0,45436,0,unknown,0,0
+id_18,54.830150206452,73.0225644479969,north,north_forest_steppe,Горьковский район,590000,110000,unknown,agricultural,crop_fodder,59,64,115,0,unknown,0,0,45438,1,unknown,0,0
+id_19,55.3802588267586,74.4614581255326,north,north_forest_steppe,Горьковский район,1804270,1300000,private,agricultural,unknown,59,85,46,0,unknown,0,0,45434,0,unknown,0,0
+id_20,57.6782314368914,71.282050552102,north,north_zone,Усть-Ишимский район,1500000,114100,share,subsidiary,fodder,50,515,258,0,unknown,0,0,45440,0,unknown,0,0
+id_21,55.9536812191335,74.4507991920671,north,north_forest_steppe,Большереченский район,150000,160000,private,agricultural,unknown,54,166,150,0,unknown,0,0,45446,0,unknown,0,0
+id_22,55.7241222008049,74.4172013104868,north,north_forest_steppe,Горьковский район,500000,140000,share,agricultural,crop_fodder,59,100,101,0,unknown,0,0,45480,0,unknown,0,0
+id_23,56.0434192024144,71.4381264800229,north,north_forest_steppe,Крутинский район,8000000,2300000,private,agricultural,unknown,49,190,67,1,simple,1,0,45443,0,1,0,0
+id_24,55.7978484953013,70.8054351378755,north,north_forest_steppe,Называевский район,400000,460000,unknown,agricultural,haying,40,238,46,0,unknown,0,0,45445,0,unknown,0,0
+id_25,55.9549435403882,71.7390210110615,north,north_forest_steppe,Тюкалинский район,500000,432000,unknown,subsidiary,crop_fodder,46,158,80,1,simple,0,0,45430,0,unknown,0,0
+id_26,55.4659479755692,73.8856014616015,north,north_forest_steppe,Горьковский район,3000000,86000,private,subsidiary,unknown,59,50,56,1,unknown,1,0,45497,0,1,0,0
+id_27,55.7213934774285,72.6622611754975,north,north_forest_steppe,Тюкалинский район,5100000,1460000,private,farm,crop_fodder,46,102,85,0,unknown,0,0,45491,1,unknown,0,0
+id_28,55.406903523662,73.0326717206069,north,north_forest_steppe,Саргатский район,800000,336000,unknown,agricultural,pasture_fodder,50,50,44,0,unknown,0,1,45496,0,unknown,0,0
+id_29,56.3666227326943,74.5484779755126,north,north_forest_steppe,Большереченский район,125000,141000,private,agricultural,unknown,54,232,215,1,complex,1,0,45501,0,1,0,0
+id_30,56.5760836878255,75.8665748905532,north,north_forest_steppe,Муромцевский район,10100000,11217757,private,agricultural,unknown,50,256,259,0,complex,1,0,45493,0,1,0,0
+id_31,54.769817109004,71.1888667094953,south,south_forest_steppe,Исилькульский район,400000,130000,share,agricultural,crop_fodder,71,148,22,0,unknown,0,0,45493,0,unknown,0,0
+id_32,54.6874512849548,71.4025247385302,south,south_forest_steppe,Исилькульский район,250000,130000,share,agricultural,unknown,71,162,34,0,unknown,0,0,45479,0,unknown,0,0
+id_33,54.737346892377,71.3188187760124,south,south_forest_steppe,Исилькульский район,500000,130000,share,agricultural,unknown,71,159,31,0,unknown,0,0,45474,0,unknown,0,0
+id_34,54.7193206738141,71.78814489557,south,south_forest_steppe,Москаленский район,85000,147000,private,agricultural,unknown,68,126,33,1,simple,1,0,45491,1,1,0,0
+id_35,54.9953373336528,71.4712693101646,south,south_forest_steppe,Москаленский район,600000,264000,unknown,agricultural,haying,68,104,33,1,unknown,1,0,45483,0,unknown,0,0
+id_36,55.1853189429826,72.3403645837692,south,south_forest_steppe,Любинский район,4200000,3793049,private,agricultural,no,66,81,27,0,complex,1,0,45483,1,0,0,0
+id_37,55.42188583351,72.9677176770375,south,south_forest_steppe,Любинский район,280000,100000,share,agricultural,crop_fodder,66,56,40,0,unknown,0,0,45481,0,unknown,0,0
+id_38,55.5613710371341,72.497452441759,south,south_forest_steppe,Любинский район,2000000,360000,unknown,agricultural,unknown,66,87,47,0,unknown,0,0,45503,0,unknown,0,0
+id_39,55.1273804966104,74.2365632612991,south,south_forest_steppe,Кормиловский район,250000,25800,share,agricultural,unknown,67,49,25,0,unknown,0,0,45471,0,unknown,0,0
+id_40,54.8511726010784,74.5696415280587,south,south_forest_steppe,Калачинский район,650000,214029,private,agricultural,crop_fodder,69,86,23,1,simple,1,0,45492,0,1,0,0
+id_41,54.8606279996642,74.7505073682686,south,steppe,Оконешниковский район,4550000,930000,share,agricultural,crop_fodder,56,110,38,0,complex,1,0,45484,0,1,0,0
+id_42,54.6762024244125,74.9450086012144,south,steppe,Оконешниковский район,3000000,650000,unknown,agricultural,crop_fodder,56,147,71,0,unknown,0,0,45490,0,unknown,0,0
+id_43,54.2458066726158,74.53959869445,south,steppe,Нововаршавский район,700000,220000,share,agricultural,crop_fodder,64,144,21,0,unknown,0,0,45474,0,unknown,0,0
+id_44,54.6249289203789,73.5252585435197,south,steppe,Таврический район,1350000,136000,private,agricultural,haying,70,32,37,0,simple,1,0,45471,0,1,0,0
+id_45,54.4871924531257,74.3053161695556,south,steppe,Таврический район,800000,117500,private,agricultural,crop_fodder,70,102,29,1,simple,1,0,45485,0,1,0,0
+id_46,54.6220618571708,72.4823970877652,south,steppe,Шербакульский район,1500000,141000,unknown,agricultural,wheat,72,65,53,0,simple,0,1,45489,0,unknown,0,0
+id_47,54.4859181867286,72.5900839808365,south,steppe,Шербакульский район,1500000,150000,private,subsidiary,crop_fodder,72,111,67,0,unknown,0,0,45486,0,unknown,0,0
+id_48,54.4543262741035,71.331010753247,south,steppe,Полтавский район,379000,190000,share,agricultural,unknown,71,186,38,0,unknown,0,0,45493,0,unknown,0,0
+id_49,54.4861703089546,71.2730334639485,south,steppe,Полтавский район,800000,319987,share,agricultural,crop_fodder,71,187,41,1,simple,1,0,45479,0,1,0,0
+id_50,54.5270269414527,71.3350821232982,south,steppe,Полтавский район,400000,210000,unknown,agricultural,unknown,71,186,38,0,unknown,0,0,45468,0,unknown,0,0
+id_51,54.7219904909558,72.985117871854,south,south_forest_steppe,Азовский немецкий национальный район,1490000,82245,private,agricultural,crop_fodder,73,35,41,1,complex,1,0,45495,0,1,0,0
+id_52,54.8728534778173,73.0852735604034,south,south_forest_steppe,Азовский немецкий национальный район,1500000,70000,private,agricultural,crop_fodder,73,17,22,1,simple,1,0,45477,0,1,0,0
+id_53,55.110962043632,73.719347339558,south,south_forest_steppe,Омский район,2099000,260000,unknown,agricultural,crop_fodder,70,10,20,0,unknown,0,0,45492,1,unknown,0,0
+id_54,55.3471769513435,73.2032667734655,south,south_forest_steppe,Омский район,3500000,153091,private,agricultural,crop_fodder,70,33,51,0,simple,1,0,45489,0,1,0,0
+id_55,54.8896709452938,73.2105572804354,south,south_forest_steppe,Омский район,1500000,32582,private,agricultural,crop_fodder,70,12,7,1,simple,1,0,45488,0,1,1,0
+id_56,54.7848972219828,73.6921255057896,south,south_forest_steppe,Омский район,3000000,180000,unknown,agricultural,crop_fodder,70,18,36,0,unknown,0,0,45486,1,unknown,0,0
+id_57,54.8115339926748,73.6633606542151,south,south_forest_steppe,Омский район,2400000,92000,private,agricultural,crop_fodder,70,18,36,0,simple,1,0,45492,0,1,0,0
+id_58,54.9094340556417,73.6269931034498,south,south_forest_steppe,Омский район,2500000,62524,private,agricultural,crop_fodder,70,10,31,1,simple,1,0,45485,0,1,0,0
+id_59,54.8979837537939,73.1897555903399,south,south_forest_steppe,Омский район,500000,19500,share,agricultural,crop_fodder,70,7,9,0,simple,1,0,45488,1,1,0,0
+id_60,55.1004161212903,73.3664493102884,south,south_forest_steppe,Омский район,2500000,96000,share,agricultural,crop_fodder,70,7,15,1,simple,1,0,45483,0,1,1,0
+id_61,54.8694685394652,73.1548749258198,south,south_forest_steppe,Омский район,7000000,60850,private,agricultural,crop_fodder,70,19,24,1,simple,1,0,45502,1,1,1,0
+id_62,55.1309681152558,73.1251019716741,south,south_forest_steppe,Омский район,1200000,48199,private,agricultural,crop_fodder,70,24,36,1,simple,1,0,45502,0,1,0,0
+id_63,55.2959701778173,73.112312998688,south,south_forest_steppe,Омский район,2500000,73900,private,agricultural,crop_fodder,70,26,44,0,simple,1,0,45501,0,1,0,0
+id_64,54.8986885224507,73.2139389018124,south,south_forest_steppe,Омский район,2000000,32362,private,agricultural,crop_fodder,70,11,6,1,simple,1,0,45499,0,1,1,0
+id_65,55.2104951463992,73.4948482635993,south,south_forest_steppe,Омский район,1100000,69998,private,agricultural,crop_fodder,70,20,24,0,complex,1,0,45493,1,1,1,1
+id_66,55.211851920751,73.4982442333606,south,south_forest_steppe,Омский район,1050000,44000,private,agricultural,crop_fodder,70,20,24,0,complex,1,0,45504,1,1,1,1
+id_67,55.2055681894953,73.4953613177069,south,south_forest_steppe,Омский район,1000000,95995,private,agricultural,crop_fodder,70,20,23,1,simple,1,0,45479,0,1,1,0
+id_68,55.3884554543638,73.210195942378,south,south_forest_steppe,Омский район,1100000,27999,private,agricultural,crop_fodder,70,68,81,0,simple,1,1,45491,1,1,0,0
+id_69,54.8031167939986,73.7040412070723,south,south_forest_steppe,Омский район,3900000,69847,private,agricultural,crop_fodder,70,31,52,0,simple,1,0,45484,0,1,0,0
+id_70,55.0566353766385,73.1004542323814,south,south_forest_steppe,Омский район,2500000,50000,private,farm,crop_fodder,70,5,20,0,unknown,0,0,45482,0,unknown,0,0
+id_71,55.4115748308498,73.265069881537,south,south_forest_steppe,Омский район,1000000,147899,private,agricultural,crop_fodder,70,35,53,0,simple,1,1,45479,0,1,1,0
+id_72,55.0778097361402,73.5845919367538,south,south_forest_steppe,Омский район,750000,28000,private,agricultural,crop_fodder,70,6,16,0,simple,1,0,45478,0,1,0,0
+id_73,55.2225754646228,73.315866572912,south,south_forest_steppe,Омский район,490000,68988,private,agricultural,crop_fodder,70,12,31,0,simple,1,0,45475,0,1,0,0
+id_74,54.9688731279926,73.6041490606408,south,south_forest_steppe,Омский район,1000000,9897,private,agricultural,crop_fodder,70,0,25,1,simple,1,0,45484,0,1,0,0
+id_75,55.2934010761892,73.2769211895803,south,south_forest_steppe,Омский район,900000,156000,private,agricultural,unknown,70,23,42,1,complex,1,0,45475,0,1,0,0
+id_76,55.4004686509665,73.2092413083651,south,south_forest_steppe,Омский район,10000000,1876153,share,agricultural,crop_fodder,70,74,58,0,complex,1,1,45489,0,1,0,0
+id_77,54.9164639206267,73.2301131489293,south,south_forest_steppe,Омский район,13000000,126431,private,agricultural,crop_fodder,70,4,1.5,1,simple,1,0,45491,1,1,1,1
+id_78,55.2480854162147,73.1795288100078,south,south_forest_steppe,Омский район,250000,27300,private,agricultural,unknown,70,42,42,0,simple,1,1,45504,1,1,0,0
+id_79,55.1667250730861,73.3585164586706,south,south_forest_steppe,Омский район,350000,12128,private,agricultural,crop_fodder,70,12,29,0,simple,1,0,45499,1,1,0,0
+id_80,55.2160072982935,73.4619028184221,south,south_forest_steppe,Омский район,350000,22427,private,agricultural,crop_fodder,70,19,24,0,simple,1,0,45499,1,1,0,0
+id_81,55.1933353367564,73.5085130470484,south,south_forest_steppe,Омский район,350000,44025,private,agricultural,unknown,70,19,24.5,0,simple,1,0,45499,1,1,0,0
+id_82,55.0711511729475,73.1219425235005,south,south_forest_steppe,Омский район,1200000,48200,private,agricultural,crop_fodder,70,11,26,0,complex,1,0,45497,1,1,0,0
+id_83,55.0246132121688,73.0633727150179,south,south_forest_steppe,Омский район,7000000,143321,private,agricultural,crop_fodder,70,8,23,1,simple,1,0,45505,1,1,0,0
+id_84,55.1651208290229,73.3813085610925,south,south_forest_steppe,Омский район,1600000,48000,private,agricultural,crop_fodder,70,13,25,1,simple,1,0,45499,1,1,1,1
+id_85,54.8041377353214,73.6193547144871,south,south_forest_steppe,Омский район,5600000,91415,private,agricultural,crop_fodder,70,16,34,1,complex,1,0,45483,1,1,0,0
