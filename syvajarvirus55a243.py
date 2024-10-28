@@ -5,6 +5,10 @@ import folium
 import json
 import pandas as pd
 import branca.colormap as cm
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+import numpy as np
 
 
 def clean_gdf(gdf):
@@ -817,3 +821,177 @@ def create_map_m2(geojson_path, csv_path):
     # Adjust tooltip font size
     m2 = adjust_tooltip_font_size(m2, font_size='10px')
     return m2
+
+
+def calculate_descriptive_statistics(df, columns):
+    """
+    Calculate descriptive statistics for specified numerical columns in a DataFrame.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - columns (list): A list of column names (strings) to analyze.
+
+    Returns:
+    - stats_df (DataFrame): A DataFrame containing the descriptive statistics.
+    """
+    # Initialize a dictionary to store the results
+    stats_dict = {}
+
+    for col in columns:
+        if col in df.columns:
+            # Ensure the column is numeric
+            data = pd.to_numeric(df[col], errors='coerce').dropna()
+            if not data.empty:
+                mean = data.mean()
+                std_dev = data.std()
+                # Manually calculate Mean Absolute Deviation (MAD)
+                mad = data.sub(mean).abs().mean()
+                stats = {
+                    'count': data.count(),
+                    'mean': mean,
+                    'median': data.median(),
+                    'min': data.min(),
+                    'max': data.max(),
+                    'range': data.max() - data.min(),
+                    'variance': data.var(),
+                    'std_dev': std_dev,
+                    'skewness': data.skew(),
+                    'kurtosis': data.kurtosis(),
+                    '5th_percentile': data.quantile(0.05),
+                    '10th_percentile': data.quantile(0.10),
+                    '25th_percentile': data.quantile(0.25),
+                    '50th_percentile': data.quantile(0.50),
+                    '75th_percentile': data.quantile(0.75),
+                    '90th_percentile': data.quantile(0.90),
+                    '95th_percentile': data.quantile(0.95),
+                    'iqr': data.quantile(0.75) - data.quantile(0.25),  # Interquartile Range
+                    'coefficient_of_variation': std_dev / mean if mean != 0 else None,
+                    'mad': mad,  # Mean Absolute Deviation
+                }
+                stats_dict[col] = stats
+            else:
+                # Column has no numeric data
+                stats_dict[col] = {}
+        else:
+            print(f"Warning: Column '{col}' not found in DataFrame.")
+
+    # Convert the stats dictionary to a DataFrame
+    stats_df = pd.DataFrame(stats_dict).transpose()
+    return stats_df
+
+
+def plot_kde_with_log_transform(df, column, log_base=np.e, shift_value=None, display_stats=True):
+    """
+    Plot KDE plots for the raw and log-transformed data with fitted normal curves.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - column (str): The name of the column to analyze.
+    - log_base (float): The base of the logarithm (default is natural logarithm).
+    - shift_value (float): A small constant to add to the data to handle zero or negative values.
+                          If None, the function will determine an appropriate shift.
+    - display_stats (bool): Whether to display summary statistics and normality tests (default is True).
+
+    Returns:
+    - None
+    """
+
+    # Check if the column exists in the DataFrame
+    if column not in df.columns:
+        print(f"Column '{column}' not found in the DataFrame.")
+        return
+
+    # Extract the data and drop missing values
+    data = df[column].dropna()
+
+    # Handle zero or negative values
+    if (data <= 0).any():
+        if shift_value is None:
+            # Determine the minimum positive value and shift
+            min_positive = data[data > 0].min()
+            shift_value = min_positive / 2
+            print(f"Data contains zero or negative values. Shifting data by {shift_value} to make all values positive.")
+        data = data + shift_value
+    else:
+        shift_value = 0  # No shift needed
+
+    # Log-transform the data
+    if log_base == np.e:
+        log_data = np.log(data)
+        log_label = 'Natural Log'
+    elif log_base == 10:
+        log_data = np.log10(data)
+        log_label = 'Log Base 10'
+    elif log_base == 2:
+        log_data = np.log2(data)
+        log_label = 'Log Base 2'
+    else:
+        # Use log with custom base
+        log_data = np.log(data) / np.log(log_base)
+        log_label = f'Log Base {log_base}'
+
+    # Prepare subplots
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Plot KDE for raw data
+    sns.kdeplot(data, ax=axes[0], color='blue', label='KDE')
+    # Fit and plot normal distribution
+    mu, std = stats.norm.fit(data)
+    xmin, xmax = axes[0].get_xlim()
+    x = np.linspace(xmin, xmax, 100)
+    p = stats.norm.pdf(x, mu, std)
+    axes[0].plot(x, p, 'k', linewidth=2, label='Normal Fit')
+    axes[0].set_title(f'Raw Data of {column}')
+    axes[0].set_xlabel(column)
+    axes[0].set_ylabel('Density')
+    axes[0].legend()
+
+    # Plot KDE for log-transformed data
+    sns.kdeplot(log_data, ax=axes[1], color='green', label='KDE')
+    # Fit and plot normal distribution
+    mu_log, std_log = stats.norm.fit(log_data)
+    xmin_log, xmax_log = axes[1].get_xlim()
+    x_log = np.linspace(xmin_log, xmax_log, 100)
+    p_log = stats.norm.pdf(x_log, mu_log, std_log)
+    axes[1].plot(x_log, p_log, 'k', linewidth=2, label='Normal Fit')
+    axes[1].set_title(f'{log_label} Transformed Data of {column}')
+    axes[1].set_xlabel(f'{log_label} of {column}')
+    axes[1].set_ylabel('Density')
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+    if display_stats:
+        # Summary statistics
+        print(f"\nSummary Statistics for {column}:")
+        print(data.describe())
+
+        print(f"\nSummary Statistics for {log_label} of {column}:")
+        print(log_data.describe())
+
+        # Normality tests
+        print("\nNormality Tests:")
+
+        # Shapiro-Wilk Test for raw data
+        shapiro_stat, shapiro_p = stats.shapiro(data)
+        print(f"\nShapiro-Wilk Test for raw data:")
+        print(f"Statistic={shapiro_stat:.5f}, p-value={shapiro_p:.5f}")
+
+        # Shapiro-Wilk Test for log-transformed data
+        shapiro_stat_log, shapiro_p_log = stats.shapiro(log_data)
+        print(f"\nShapiro-Wilk Test for log-transformed data:")
+        print(f"Statistic={shapiro_stat_log:.5f}, p-value={shapiro_p_log:.5f}")
+
+        # Interpretation
+        alpha = 0.05
+        if shapiro_p > alpha:
+            print("\nRaw data looks normally distributed (fail to reject H0 at alpha=0.05).")
+        else:
+            print("\nRaw data does not look normally distributed (reject H0 at alpha=0.05).")
+
+        if shapiro_p_log > alpha:
+            print("Log-transformed data looks normally distributed (fail to reject H0 at alpha=0.05).")
+        else:
+            print("Log-transformed data does not look normally distributed (reject H0 at alpha=0.05).")
+
