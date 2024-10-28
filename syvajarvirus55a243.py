@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 import numpy as np
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 
 
 def clean_gdf(gdf):
@@ -994,4 +996,402 @@ def plot_kde_with_log_transform(df, column, log_base=np.e, shift_value=None, dis
             print("Log-transformed data looks normally distributed (fail to reject H0 at alpha=0.05).")
         else:
             print("Log-transformed data does not look normally distributed (reject H0 at alpha=0.05).")
+
+
+def plot_pie_chart(df, column, title=None, figsize=(8, 8), autopct='%1.1f%%', colors=None, explode=None):
+    """
+    Plot a pie chart showing counts and percentages for each category in a specified column.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - column (str): The name of the categorical column to visualize.
+    - title (str): The title of the pie chart (default is 'Distribution of {column}').
+    - figsize (tuple): Figure size in inches (default is (8, 8)).
+    - autopct (str): String format for displaying percentages (default is '%1.1f%%').
+    - colors (list): List of colors for the pie chart slices (default is None).
+    - explode (list): List of fractions to offset slices (default is None).
+
+    Returns:
+    - None
+    """
+
+    # Check if the column exists in the DataFrame
+    if column not in df.columns:
+        print(f"Column '{column}' not found in the DataFrame.")
+        return
+
+    # Get counts and percentages
+    counts = df[column].value_counts()
+    percentages = df[column].value_counts(normalize=True) * 100
+
+    # Combine counts and percentages into labels
+    labels = [f'{cat}\n{count} ({pct:.1f}%)' for cat, count, pct in zip(counts.index, counts.values, percentages.values)]
+
+    # Plot the pie chart
+    plt.figure(figsize=figsize)
+    plt.pie(counts.values, labels=labels, autopct=None, startangle=90, colors=colors, explode=explode)
+    plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+    if title is None:
+        title = f'Distribution of {column}'
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_bar_chart(df, column, title=None, figsize=(10, 6), color='skyblue'):
+    """
+    Plot a horizontal bar chart showing counts for each category in a specified column.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - column (str): The name of the categorical column to visualize.
+    - title (str): The title of the bar chart (default is 'Distribution of {column}').
+    - figsize (tuple): Figure size in inches (default is (10, 6)).
+    - color (str): Color of the bars.
+
+    Returns:
+    - None
+    """
+
+    # Check if the column exists in the DataFrame
+    if column not in df.columns:
+        print(f"Column '{column}' not found in the DataFrame.")
+        return
+
+    # Get counts
+    counts = df[column].value_counts()
+
+    # Plot the bar chart
+    plt.figure(figsize=figsize)
+    counts.sort_values().plot(kind='barh', color=color)
+    if title is None:
+        title = f'Distribution of {column}'
+    plt.title(title)
+    plt.xlabel('Count')
+    plt.ylabel(column)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_isolated_analysis(df, price_column, variable_column, log_base=np.e, figsize=(14, 12)):
+    """
+    Plot four scatter plots between price per sqm and a variable, with combinations of raw and log-transformed data.
+    Include Pearson, Spearman, and Kendall correlation coefficients and p-values.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - price_column (str): The name of the price per sqm column.
+    - variable_column (str): The name of the variable to analyze.
+    - log_base (float): The base of the logarithm for transformations (default is natural logarithm).
+    - figsize (tuple): Figure size in inches (default is (14, 12)).
+
+    Returns:
+    - None
+    """
+
+    # Check if the columns exist in the DataFrame
+    if price_column not in df.columns or variable_column not in df.columns:
+        print(f"One or both columns '{price_column}' and '{variable_column}' not found in the DataFrame.")
+        return
+
+    # Extract the data and drop missing values
+    data = df[[price_column, variable_column]].dropna()
+    x = data[variable_column]
+    y = data[price_column]
+
+    # Handle zero or negative values for logarithms
+    def prepare_log_data(series):
+        if (series <= 0).any():
+            # Shift data to positive
+            min_positive = series[series > 0].min()
+            shift_value = min_positive / 2
+            series = series + shift_value
+            print(f"Data in '{series.name}' contains zero or negative values. Shifting data by {shift_value:.5f}.")
+        else:
+            shift_value = 0
+        return series, shift_value
+
+    x_log, x_shift = prepare_log_data(x.copy())
+    y_log, y_shift = prepare_log_data(y.copy())
+
+    # Apply logarithm
+    if log_base == np.e:
+        x_log = np.log(x_log)
+        y_log = np.log(y_log)
+        log_label = 'Natural Log'
+    elif log_base == 10:
+        x_log = np.log10(x_log)
+        y_log = np.log10(y_log)
+        log_label = 'Log Base 10'
+    elif log_base == 2:
+        x_log = np.log2(x_log)
+        y_log = np.log2(y_log)
+        log_label = 'Log Base 2'
+    else:
+        x_log = np.log(x_log) / np.log(log_base)
+        y_log = np.log(y_log) / np.log(log_base)
+        log_label = f'Log Base {log_base}'
+
+    # Prepare subplots
+    fig, axes = plt.subplots(2, 2, figsize=figsize)
+    plt.subplots_adjust(hspace=0.4, wspace=0.3)
+
+    # Plot configurations
+    plot_configs = [
+        (x, y, 'Raw Y vs. Raw X'),
+        (x, y_log, f'{log_label} Y vs. Raw X'),
+        (x_log, y, f'Raw Y vs. {log_label} X'),
+        (x_log, y_log, f'{log_label} Y vs. {log_label} X')
+    ]
+
+    for ax, (x_data, y_data, title) in zip(axes.flatten(), plot_configs):
+        # Scatter plot
+        sns.scatterplot(x=x_data, y=y_data, ax=ax)
+        ax.set_title(title)
+        ax.set_xlabel(variable_column if 'Raw X' in title else f'{log_label} of {variable_column}')
+        ax.set_ylabel(price_column if 'Raw Y' in title else f'{log_label} of {price_column}')
+
+        # Calculate correlations
+        pearson_coef, pearson_p = stats.pearsonr(x_data, y_data)
+        spearman_coef, spearman_p = stats.spearmanr(x_data, y_data)
+        kendall_coef, kendall_p = stats.kendalltau(x_data, y_data)
+
+        # Add correlation text
+        textstr = (
+            f"Pearson r: {pearson_coef:.3f} (p={pearson_p:.3f})\n"
+            f"Spearman rho: {spearman_coef:.3f} (p={spearman_p:.3f})\n"
+            f"Kendall tau: {kendall_coef:.3f} (p={kendall_p:.3f})"
+        )
+        props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+        ax.text(0.75, 0.95, textstr, transform=ax.transAxes, fontsize=10,
+                verticalalignment='top', bbox=props)
+
+        # Add regression line
+        sns.regplot(x=x_data, y=y_data, ax=ax, scatter=False, color='red', line_kws={'linewidth': 1})
+
+    plt.show()
+
+
+def linear_regression_plot(
+    df,
+    y_column,
+    x_column,
+    use_log_y=False,
+    use_log_x=False,
+    log_base=np.e,
+    figsize=(8, 6)
+):
+    """
+    Perform linear regression analysis and plot the scatter plot with regression line,
+    equation, and R² value on the plot.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the dependent variable (Y).
+    - x_column (str): The name of the independent variable (X).
+    - use_log_y (bool): Whether to use logarithmic transformation on Y (default is False).
+    - use_log_x (bool): Whether to use logarithmic transformation on X (default is False).
+    - log_base (float): The base of the logarithm for transformations (default is natural logarithm).
+    - figsize (tuple): Figure size in inches (default is (8, 6)).
+
+    Returns:
+    - None
+    """
+
+    # Check if the columns exist in the DataFrame
+    if y_column not in df.columns or x_column not in df.columns:
+        print(f"One or both columns '{y_column}' and '{x_column}' not found in the DataFrame.")
+        return
+
+    # Extract the data and drop missing values
+    data = df[[y_column, x_column]].dropna()
+    X = data[x_column].copy()
+    Y = data[y_column].copy()
+
+    # Handle zero or negative values for logarithms
+    def prepare_log_data(series):
+        shift_value = 0
+        if (series <= 0).any():
+            # Shift data to positive
+            min_positive = series[series > 0].min()
+            shift_value = min_positive / 2
+            series = series + shift_value
+            print(f"Data in '{series.name}' contains zero or negative values. Shifting data by {shift_value:.5f}.")
+        return series, shift_value
+
+    # Apply log transformations if specified
+    if use_log_x:
+        X, x_shift = prepare_log_data(X)
+        if log_base == np.e:
+            X = np.log(X)
+            x_label = f'ln({x_column})'
+        elif log_base == 10:
+            X = np.log10(X)
+            x_label = f'log₁₀({x_column})'
+        elif log_base == 2:
+            X = np.log2(X)
+            x_label = f'log₂({x_column})'
+        else:
+            X = np.log(X) / np.log(log_base)
+            x_label = f'log_base{log_base}({x_column})'
+    else:
+        x_label = x_column
+
+    if use_log_y:
+        Y, y_shift = prepare_log_data(Y)
+        if log_base == np.e:
+            Y = np.log(Y)
+            y_label = f'ln({y_column})'
+        elif log_base == 10:
+            Y = np.log10(Y)
+            y_label = f'log₁₀({y_column})'
+        elif log_base == 2:
+            Y = np.log2(Y)
+            y_label = f'log₂({y_column})'
+        else:
+            Y = np.log(Y) / np.log(log_base)
+            y_label = f'log_base{log_base}({y_column})'
+    else:
+        y_label = y_column
+
+    # Reshape X for sklearn
+    X_reshaped = X.values.reshape(-1, 1)
+
+    # Perform linear regression
+    model = LinearRegression()
+    model.fit(X_reshaped, Y)
+    Y_pred = model.predict(X_reshaped)
+
+    # Calculate R-squared
+    r_squared = model.score(X_reshaped, Y)
+
+    # Get regression coefficients
+    intercept = model.intercept_
+    slope = model.coef_[0]
+
+    # Prepare the regression equation
+    equation = f"y = {intercept:.3f} + {slope:.3f} * x"
+
+    # Plotting
+    plt.figure(figsize=figsize)
+    sns.scatterplot(x=X, y=Y, color='blue', label='Data')
+    plt.plot(X, Y_pred, color='red', label='Fit')
+
+    # Annotate the equation and R-squared on the plot
+    textstr = f"Regression equation:\n{equation}\n$R^2$ = {r_squared:.3f}"
+    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+    plt.text(0.75, 0.95, textstr, transform=plt.gca().transAxes, fontsize=10,
+             verticalalignment='top', bbox=props)
+
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(f'Linear Regression: {y_label} vs. {x_label}')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def perform_linear_regression(
+    df,
+    y_column,
+    x_columns,
+    use_log_y=False,
+    use_log_x=False,
+    log_base=np.e,
+    add_constant=True,
+    display_summary=True
+):
+    """
+    Perform linear regression analysis and provide a full statistical inference.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the dependent variable (Y).
+    - x_columns (str or list): The name(s) of the independent variable(s) (X).
+    - use_log_y (bool): Whether to use logarithmic transformation on Y (default is False).
+    - use_log_x (bool): Whether to use logarithmic transformation on X (default is False).
+    - log_base (float): The base of the logarithm for transformations (default is natural logarithm).
+    - add_constant (bool): Whether to add a constant term to the model (default is True).
+    - display_summary (bool): Whether to display the summary of the regression results (default is True).
+
+    Returns:
+    - results (RegressionResultsWrapper): The fitted regression model results.
+    """
+
+    # Ensure x_columns is a list
+    if isinstance(x_columns, str):
+        x_columns = [x_columns]
+
+    # Check if the columns exist in the DataFrame
+    all_columns = [y_column] + x_columns
+    for col in all_columns:
+        if col not in df.columns:
+            print(f"Column '{col}' not found in the DataFrame.")
+            return
+
+    # Extract the data and drop missing values
+    data = df[all_columns].dropna()
+    Y = data[y_column].copy()
+    X = data[x_columns].copy()
+
+    # Handle zero or negative values for logarithms
+    def prepare_log_data(series):
+        shift_value = 0
+        if (series <= 0).any():
+            # Shift data to positive
+            min_positive = series[series > 0].min()
+            shift_value = min_positive / 2
+            series = series + shift_value
+            print(f"Data in '{series.name}' contains zero or negative values. Shifting data by {shift_value:.5f}.")
+        return series, shift_value
+
+    # Apply log transformations if specified
+    if use_log_y:
+        Y, y_shift = prepare_log_data(Y)
+        if log_base == np.e:
+            Y = np.log(Y)
+        elif log_base == 10:
+            Y = np.log10(Y)
+        elif log_base == 2:
+            Y = np.log2(Y)
+        else:
+            Y = np.log(Y) / np.log(log_base)
+
+    if use_log_x:
+        for col in X.columns:
+            X[col], x_shift = prepare_log_data(X[col])
+            if log_base == np.e:
+                X[col] = np.log(X[col])
+            elif log_base == 10:
+                X[col] = np.log10(X[col])
+            elif log_base == 2:
+                X[col] = np.log2(X[col])
+            else:
+                X[col] = np.log(X[col]) / np.log(log_base)
+
+    # Add constant term if specified
+    if add_constant:
+        X = sm.add_constant(X)
+
+    # Fit the regression model
+    model = sm.OLS(Y, X)
+    results = model.fit()
+
+    if display_summary:
+        print(results.summary())
+
+    # Additional metrics
+    y_pred = results.predict(X)
+    residuals = Y - y_pred
+
+    mse = np.mean(residuals ** 2)
+    rmse = np.sqrt(mse)
+    mae = np.mean(np.abs(residuals))
+
+    print("\nAdditional Model Quality Metrics:")
+    print(f"Mean Squared Error (MSE): {mse:.5f}")
+    print(f"Root Mean Squared Error (RMSE): {rmse:.5f}")
+    print(f"Mean Absolute Error (MAE): {mae:.5f}")
+
+    return results
 
