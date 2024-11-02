@@ -11,6 +11,14 @@ from scipy import stats
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
+from scipy.stats import norm
+from scipy.stats import mannwhitneyu, rankdata, norm
+import warnings
+from sklearn.metrics import (
+    roc_curve, auc, confusion_matrix,
+    accuracy_score, precision_score, recall_score,
+    f1_score, classification_report
+)
 
 
 def clean_gdf(gdf):
@@ -1394,4 +1402,813 @@ def perform_linear_regression(
     print(f"Mean Absolute Error (MAE): {mae:.5f}")
 
     return results
+
+
+def plot_violin_comparison(df, y_column, x_column, figsize=(12, 6), log_base=np.e):
+    """
+    Plots paired violin plots for raw and log-transformed data of a continuous variable Y,
+    grouped by a binary variable X.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable (Y).
+    - x_column (str): The name of the binary variable (X), with values 0 and 1.
+    - figsize (tuple): The size of the figure (default is (12, 6)).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - None
+    """
+
+    # Check if columns exist
+    if y_column not in df.columns:
+        print(f"Column '{y_column}' not found in the DataFrame.")
+        return
+    if x_column not in df.columns:
+        print(f"Column '{x_column}' not found in the DataFrame.")
+        return
+
+    # Ensure X is binary with values 0 and 1
+    unique_values = df[x_column].dropna().unique()
+    if set(unique_values) != {0, 1}:
+        print(f"Column '{x_column}' must be binary with values 0 and 1.")
+        return
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Prepare data for raw Y
+    data_raw = data.copy()
+
+    # Prepare data for log-transformed Y
+    data_log = data.copy()
+
+    # Handle zero or negative values in Y before log transformation
+    if (data_log[y_column] <= 0).any():
+        min_positive = data_log[y_column][data_log[y_column] > 0].min()
+        shift_value = min_positive / 2
+        data_log[y_column] = data_log[y_column] + shift_value
+        print(f"Data in '{y_column}' contains zero or negative values. "
+              f"Shifting data by {shift_value:.5f} before log transformation.")
+
+    # Apply log transformation
+    if log_base == np.e:
+        data_log[y_column] = np.log(data_log[y_column])
+        y_label_log = f'ln({y_column})'
+    elif log_base == 10:
+        data_log[y_column] = np.log10(data_log[y_column])
+        y_label_log = f'log₁₀({y_column})'
+    elif log_base == 2:
+        data_log[y_column] = np.log2(data_log[y_column])
+        y_label_log = f'log₂({y_column})'
+    else:
+        data_log[y_column] = np.log(data_log[y_column]) / np.log(log_base)
+        y_label_log = f'log base {log_base} of {y_column}'
+
+    # Create figure with two subplots
+    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=False)
+
+    # Plot violin plot for raw data
+    sns.violinplot(x=x_column, y=y_column, data=data_raw, ax=axes[0], palette="Set2")
+    axes[0].set_title(f'Distribution of {y_column} by {x_column} (Raw Data)')
+    axes[0].set_xlabel(x_column)
+    axes[0].set_ylabel(y_column)
+
+    # Annotate with summary statistics
+    medians_raw = data_raw.groupby(x_column)[y_column].median()
+    for idx, median in enumerate(medians_raw):
+        axes[0].text(idx, median, f'Median: {median:.2f}', horizontalalignment='center', color='black', weight='semibold')
+
+    # Plot violin plot for log-transformed data
+    sns.violinplot(x=x_column, y=y_column, data=data_log, ax=axes[1], palette="Set2")
+    axes[1].set_title(f'Distribution of {y_label_log} by {x_column} (Log-Transformed Data)')
+    axes[1].set_xlabel(x_column)
+    axes[1].set_ylabel(y_label_log)
+
+    # Annotate with summary statistics
+    medians_log = data_log.groupby(x_column)[y_column].median()
+    for idx, median in enumerate(medians_log):
+        axes[1].text(idx, median, f'Median: {median:.2f}', horizontalalignment='center', color='black', weight='semibold')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_kde_comparison(df, y_column, x_column, figsize=(14, 6), log_base=np.e):
+    """
+    Plots KDE plots for raw and log-transformed data of a continuous variable Y,
+    including the whole population and each group defined by a binary variable X.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable (Y).
+    - x_column (str): The name of the binary variable (X), with values 0 and 1.
+    - figsize (tuple): The size of the figure (default is (14, 6)).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - None
+    """
+
+    # Check if columns exist
+    if y_column not in df.columns:
+        print(f"Column '{y_column}' not found in the DataFrame.")
+        return
+    if x_column not in df.columns:
+        print(f"Column '{x_column}' not found in the DataFrame.")
+        return
+
+    # Ensure X is binary with values 0 and 1
+    unique_values = df[x_column].dropna().unique()
+    if set(unique_values) != {0, 1}:
+        print(f"Column '{x_column}' must be binary with values 0 and 1.")
+        return
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Handle zero or negative values in Y before log transformation
+    data_log = data.copy()
+    if (data_log[y_column] <= 0).any():
+        min_positive = data_log[y_column][data_log[y_column] > 0].min()
+        shift_value = min_positive / 2
+        data_log[y_column] = data_log[y_column] + shift_value
+        print(f"Data in '{y_column}' contains zero or negative values. "
+              f"Shifting data by {shift_value:.5f} before log transformation.")
+
+    # Apply log transformation
+    if log_base == np.e:
+        data_log[y_column] = np.log(data_log[y_column])
+        y_label_log = f'ln({y_column})'
+    elif log_base == 10:
+        data_log[y_column] = np.log10(data_log[y_column])
+        y_label_log = f'log₁₀({y_column})'
+    elif log_base == 2:
+        data_log[y_column] = np.log2(data_log[y_column])
+        y_label_log = f'log₂({y_column})'
+    else:
+        data_log[y_column] = np.log(data_log[y_column]) / np.log(log_base)
+        y_label_log = f'log base {log_base} of {y_column}'
+
+    # Create figure with two subplots
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
+
+    # Plot KDE for raw data
+    ax = axes[0]
+    sns.kdeplot(data[y_column], label='Whole Population', ax=ax, color='black', linewidth=2)
+    sns.kdeplot(data[data[x_column]==0][y_column], label=f'{x_column}=0', ax=ax)
+    sns.kdeplot(data[data[x_column]==1][y_column], label=f'{x_column}=1', ax=ax)
+    # Plot normal curve for the whole population
+    mean = data[y_column].mean()
+    std = data[y_column].std()
+    x_vals = np.linspace(data[y_column].min(), data[y_column].max(), 200)
+    normal_curve = norm.pdf(x_vals, mean, std)
+    # Scale the normal curve to match the KDE peak
+    normal_curve *= max(sns.kdeplot(data[y_column], ax=ax).get_lines()[-1].get_data()[1]) / max(normal_curve)
+    ax.plot(x_vals, normal_curve, color='red', linestyle='--', label='Normal Curve')
+    ax.set_title(f'Distribution of {y_column} (Raw Data)')
+    ax.set_xlabel(y_column)
+    ax.set_ylabel('Density')
+    ax.legend()
+
+    # Plot KDE for log-transformed data
+    ax = axes[1]
+    sns.kdeplot(data_log[y_column], label='Whole Population', ax=ax, color='black', linewidth=2)
+    sns.kdeplot(data_log[data_log[x_column]==0][y_column], label=f'{x_column}=0', ax=ax)
+    sns.kdeplot(data_log[data_log[x_column]==1][y_column], label=f'{x_column}=1', ax=ax)
+    # Plot normal curve for the whole population
+    mean = data_log[y_column].mean()
+    std = data_log[y_column].std()
+    x_vals = np.linspace(data_log[y_column].min(), data_log[y_column].max(), 200)
+    normal_curve = norm.pdf(x_vals, mean, std)
+    # Scale the normal curve to match the KDE peak
+    normal_curve *= max(sns.kdeplot(data_log[y_column], ax=ax).get_lines()[-1].get_data()[1]) / max(normal_curve)
+    ax.plot(x_vals, normal_curve, color='red', linestyle='--', label='Normal Curve')
+    ax.set_title(f'Distribution of {y_label_log} (Log-Transformed Data)')
+    ax.set_xlabel(y_label_log)
+    ax.set_ylabel('Density')
+    ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+def perform_mann_whitney_tests(df, y_column, x_column, alternative='two-sided', log_base=np.e):
+    """
+    Performs the Mann-Whitney U-test on raw and log-transformed data of a continuous variable Y,
+    grouped by a binary variable X.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable (Y).
+    - x_column (str): The name of the binary variable (X), with values 0 and 1.
+    - alternative (str): Defines the alternative hypothesis ('two-sided', 'less', or 'greater').
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - results (dict): A dictionary containing test results for raw and log-transformed data.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Ensure X is binary with values 0 and 1
+    unique_values = df[x_column].dropna().unique()
+    if set(unique_values) != {0, 1}:
+        raise ValueError(f"Column '{x_column}' must be binary with values 0 and 1.")
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Split data into groups based on X
+    group0 = data[data[x_column] == 0][y_column]
+    group1 = data[data[x_column] == 1][y_column]
+
+    # Prepare results dictionary
+    results = {}
+
+    # Perform Mann-Whitney U-test on raw data
+    try:
+        u_stat_raw, p_value_raw = mannwhitneyu(group0, group1, alternative=alternative)
+    except ValueError as e:
+        warnings.warn(f"Error performing Mann-Whitney U-test on raw data: {e}")
+        u_stat_raw, p_value_raw = np.nan, np.nan
+
+    # Calculate effect size (rank-biserial correlation) for raw data
+    n1, n2 = len(group0), len(group1)
+    rank_sum = group1.rank().sum()
+    effect_size_raw = 1 - (2 * u_stat_raw) / (n1 * n2)
+
+    # Handle zero or negative values in Y before log transformation
+    data_log = data.copy()
+    shift_value = 0
+    if (data_log[y_column] <= 0).any():
+        min_positive = data_log[y_column][data_log[y_column] > 0].min()
+        shift_value = min_positive / 2
+        data_log[y_column] = data_log[y_column] + shift_value
+        print(f"Data in '{y_column}' contains zero or negative values. "
+              f"Shifting data by {shift_value:.5f} before log transformation.")
+
+    # Apply log transformation
+    if log_base == np.e:
+        data_log[y_column] = np.log(data_log[y_column])
+        y_label_log = f'ln({y_column})'
+    elif log_base == 10:
+        data_log[y_column] = np.log10(data_log[y_column])
+        y_label_log = f'log₁₀({y_column})'
+    elif log_base == 2:
+        data_log[y_column] = np.log2(data_log[y_column])
+        y_label_log = f'log₂({y_column})'
+    else:
+        data_log[y_column] = np.log(data_log[y_column]) / np.log(log_base)
+        y_label_log = f'log base {log_base} of {y_column}'
+
+    # Split log-transformed data into groups
+    group0_log = data_log[data_log[x_column] == 0][y_column]
+    group1_log = data_log[data_log[x_column] == 1][y_column]
+
+    # Perform Mann-Whitney U-test on log-transformed data
+    try:
+        u_stat_log, p_value_log = mannwhitneyu(group0_log, group1_log, alternative=alternative)
+    except ValueError as e:
+        warnings.warn(f"Error performing Mann-Whitney U-test on log-transformed data: {e}")
+        u_stat_log, p_value_log = np.nan, np.nan
+
+    # Calculate effect size (rank-biserial correlation) for log-transformed data
+    n1_log, n2_log = len(group0_log), len(group1_log)
+    effect_size_log = 1 - (2 * u_stat_log) / (n1_log * n2_log)
+
+    # Compile results
+    results['raw'] = {
+        'u_statistic': u_stat_raw,
+        'p_value': p_value_raw,
+        'effect_size': effect_size_raw,
+        'group0_median': group0.median(),
+        'group1_median': group1.median(),
+        'n_group0': n1,
+        'n_group1': n2,
+        'shift_value': shift_value
+    }
+
+    results['log_transformed'] = {
+        'u_statistic': u_stat_log,
+        'p_value': p_value_log,
+        'effect_size': effect_size_log,
+        'group0_median': group0_log.median(),
+        'group1_median': group1_log.median(),
+        'n_group0': n1_log,
+        'n_group1': n2_log,
+        'shift_value': shift_value,
+        'log_base': log_base
+    }
+
+    # Print summary of results
+    print("Mann-Whitney U-test Results:")
+    print("\nRaw Data:")
+    print(f"Group 0 Median: {results['raw']['group0_median']:.4f}")
+    print(f"Group 1 Median: {results['raw']['group1_median']:.4f}")
+    print(f"U Statistic: {results['raw']['u_statistic']:.4f}")
+    print(f"P-value: {results['raw']['p_value']:.4f}")
+    print(f"Effect Size (Rank-Biserial Correlation): {results['raw']['effect_size']:.4f}")
+    print(f"Sample Sizes: n0 = {results['raw']['n_group0']}, n1 = {results['raw']['n_group1']}")
+
+    print("\nLog-Transformed Data:")
+    print(f"Group 0 Median: {results['log_transformed']['group0_median']:.4f}")
+    print(f"Group 1 Median: {results['log_transformed']['group1_median']:.4f}")
+    print(f"U Statistic: {results['log_transformed']['u_statistic']:.4f}")
+    print(f"P-value: {results['log_transformed']['p_value']:.4f}")
+    print(f"Effect Size (Rank-Biserial Correlation): {results['log_transformed']['effect_size']:.4f}")
+    print(f"Sample Sizes: n0 = {results['log_transformed']['n_group0']}, n1 = {results['log_transformed']['n_group1']}")
+    print(f"Log Base Used: {log_base}")
+
+    return results
+
+
+def mann_whitney_effect_sizes(df, y_column, x_column, alternative='two-sided', conf_level=0.95, log_transform=False, log_base=np.e):
+    """
+    Performs the Mann-Whitney U-test and calculates effect sizes (Cliff's Delta and effect size r)
+    for a continuous variable Y grouped by a binary variable X, with an option for logarithmic transformation.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable (Y).
+    - x_column (str): The name of the binary variable (X), with values 0 and 1.
+    - alternative (str): Defines the alternative hypothesis ('two-sided', 'less', or 'greater').
+    - conf_level (float): Confidence level for confidence interval (default is 0.95).
+    - log_transform (bool): Whether to apply logarithmic transformation to Y (default is False).
+    - log_base (float): The base of the logarithm for transformation (default is np.e).
+
+    Returns:
+    - results (dict): A dictionary containing test results and effect sizes.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Ensure X is binary with values 0 and 1
+    unique_values = df[x_column].dropna().unique()
+    if set(unique_values) != {0, 1}:
+        raise ValueError(f"Column '{x_column}' must be binary with values 0 and 1.")
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Apply logarithmic transformation if requested
+    shift_value = 0  # To handle zero or negative values
+    if log_transform:
+        y_data = data[y_column].copy()
+        # Handle zero or negative values
+        if (y_data <= 0).any():
+            min_positive = y_data[y_data > 0].min()
+            shift_value = min_positive / 2
+            y_data = y_data + shift_value
+            print(f"Data in '{y_column}' contains zero or negative values. "
+                  f"Shifting data by {shift_value:.5f} before log transformation.")
+        # Apply logarithmic transformation
+        if log_base == np.e:
+            y_data = np.log(y_data)
+            y_label = f'ln({y_column})'
+        elif log_base == 10:
+            y_data = np.log10(y_data)
+            y_label = f'log₁₀({y_column})'
+        elif log_base == 2:
+            y_data = np.log2(y_data)
+            y_label = f'log₂({y_column})'
+        else:
+            y_data = np.log(y_data) / np.log(log_base)
+            y_label = f'log base {log_base} of {y_column}'
+    else:
+        y_data = data[y_column]
+        y_label = y_column
+
+    # Update data with transformed y_data
+    data = data.copy()
+    data[y_column] = y_data
+
+    # Split data into groups based on X
+    group0 = data[data[x_column] == 0][y_column].values
+    group1 = data[data[x_column] == 1][y_column].values
+
+    # Perform Mann-Whitney U-test
+    try:
+        u_statistic, p_value = mannwhitneyu(group0, group1, alternative=alternative)
+    except ValueError as e:
+        warnings.warn(f"Error performing Mann-Whitney U-test: {e}")
+        u_statistic, p_value = np.nan, np.nan
+
+    n0 = len(group0)
+    n1 = len(group1)
+
+    # Calculate z-statistic for effect size r
+    # Continuity correction is applied when sample sizes are small
+    mean_u = n0 * n1 / 2
+    std_u = np.sqrt(n0 * n1 * (n0 + n1 + 1) / 12)
+    if std_u == 0:
+        warnings.warn("Standard deviation of U is zero, cannot compute z-statistic.")
+        z = 0
+    else:
+        # Adjust U statistic for continuity correction
+        if alternative == 'two-sided':
+            correction = 0
+        else:
+            correction = 0.5
+        z = (u_statistic - mean_u - correction) / std_u
+
+    effect_size_r = z / np.sqrt(n0 + n1)
+
+    # Calculate Cliff's Delta
+    # Use all pairwise comparisons
+    def calculate_cliffs_delta(group1, group2):
+        n1 = len(group1)
+        n2 = len(group2)
+        total_pairs = n1 * n2
+        if total_pairs == 0:
+            warnings.warn("One of the groups is empty, cannot compute Cliff's Delta.")
+            return np.nan, (np.nan, np.nan)
+
+        # Efficient computation using broadcasting
+        comparisons = np.subtract.outer(group1, group2)
+        more = np.sum(comparisons > 0)
+        less = np.sum(comparisons < 0)
+        delta = (more - less) / total_pairs
+
+        # Calculate confidence interval (assuming normal approximation)
+        se_delta = np.sqrt((n0 + n1 + 1) / (3 * n0 * n1))
+        alpha = 1 - conf_level
+        z_crit = norm.ppf(1 - alpha / 2)
+        delta_ci_lower = delta - z_crit * se_delta
+        delta_ci_upper = delta + z_crit * se_delta
+
+        return delta, (delta_ci_lower, delta_ci_upper)
+
+    cliffs_delta, cliffs_delta_ci = calculate_cliffs_delta(group1, group0)
+
+    # Prepare results
+    results = {
+        'u_statistic': u_statistic,
+        'p_value': p_value,
+        'z_statistic': z,
+        'effect_size_r': effect_size_r,
+        'cliffs_delta': cliffs_delta,
+        'cliffs_delta_ci': cliffs_delta_ci,
+        'group0_median': np.median(group0),
+        'group1_median': np.median(group1),
+        'n_group0': n0,
+        'n_group1': n1,
+        'log_transform': log_transform,
+        'log_base': log_base,
+        'shift_value': shift_value,
+        'y_label': y_label,
+    }
+
+    # Print results
+    print("Mann-Whitney U-test Results:")
+    print(f"Group 0 (n={n0}) Median {y_label}: {results['group0_median']:.4f}")
+    print(f"Group 1 (n={n1}) Median {y_label}: {results['group1_median']:.4f}")
+    print(f"U Statistic: {results['u_statistic']:.4f}")
+    print(f"P-value: {results['p_value']:.4f}")
+    print(f"Z Statistic: {results['z_statistic']:.4f}")
+    print(f"Effect Size r: {results['effect_size_r']:.4f}")
+    print(f"Cliff's Delta: {results['cliffs_delta']:.4f}")
+    print(f"Cliff's Delta CI ({conf_level*100:.1f}%): ({results['cliffs_delta_ci'][0]:.4f}, {results['cliffs_delta_ci'][1]:.4f})")
+    if log_transform:
+        print(f"Logarithmic transformation applied using base {log_base}.")
+        if shift_value != 0:
+            print(f"Data shifted by {shift_value:.5f} before log transformation.")
+    else:
+        print("No logarithmic transformation applied.")
+
+    return results
+
+
+def perform_roc_analysis(df, y_column, x_column, log_transform=False, log_base=np.e, pos_label=1):
+    """
+    Performs ROC analysis on a continuous variable to predict a binary outcome variable.
+    Optionally applies logarithmic transformation to the continuous variable.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous predictor variable.
+    - x_column (str): The name of the binary outcome variable.
+    - log_transform (bool): Whether to apply logarithmic transformation to y_column (default is False).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+    - pos_label (int or str): The label of the positive class in x_column (default is 1).
+
+    Returns:
+    - results (dict): A dictionary containing AUC, optimal threshold, and performance metrics.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Ensure x_column is binary
+    unique_values = df[x_column].dropna().unique()
+    if len(unique_values) != 2:
+        raise ValueError(f"Column '{x_column}' must be binary with two unique values.")
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Handle zero or negative values before log transformation
+    shift_value = 0
+    if log_transform:
+        y_data = data[y_column].copy()
+        if (y_data <= 0).any():
+            min_positive = y_data[y_data > 0].min()
+            shift_value = min_positive / 2
+            y_data = y_data + shift_value
+            print(f"Data in '{y_column}' contains zero or negative values. "
+                  f"Shifting data by {shift_value:.5f} before log transformation.")
+        # Apply log transformation
+        if log_base == np.e:
+            y_data = np.log(y_data)
+            y_label = f'ln({y_column})'
+        elif log_base == 10:
+            y_data = np.log10(y_data)
+            y_label = f'log₁₀({y_column})'
+        elif log_base == 2:
+            y_data = np.log2(y_data)
+            y_label = f'log₂({y_column})'
+        else:
+            y_data = np.log(y_data) / np.log(log_base)
+            y_label = f'log base {log_base} of {y_column}'
+    else:
+        y_data = data[y_column]
+        y_label = y_column
+
+    # Prepare data for ROC analysis
+    X = y_data.values
+    y = data[x_column].values
+
+    # Compute ROC curve and AUC
+    fpr, tpr, thresholds = roc_curve(y, X, pos_label=pos_label)
+    roc_auc = auc(fpr, tpr)
+
+    # Find optimal threshold using Youden's Index
+    youden_index = tpr - fpr
+    optimal_idx = np.argmax(youden_index)
+    optimal_threshold = thresholds[optimal_idx]
+    optimal_tpr = tpr[optimal_idx]
+    optimal_fpr = fpr[optimal_idx]
+
+    # Predict classes at optimal threshold
+    y_pred = (X >= optimal_threshold).astype(int)
+
+    # Compute performance metrics
+    accuracy = accuracy_score(y, y_pred)
+    precision = precision_score(y, y_pred, pos_label=pos_label)
+    recall = recall_score(y, y_pred, pos_label=pos_label)
+    f1 = f1_score(y, y_pred, pos_label=pos_label)
+    cm = confusion_matrix(y, y_pred)
+    tn, fp, fn, tp = cm.ravel()
+    specificity = tn / (tn + fp)
+
+    # Plot ROC curve
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, color='darkorange', lw=2,
+             label=f'ROC curve (AUC = {roc_auc:.4f})')
+    plt.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')
+    plt.scatter(optimal_fpr, optimal_tpr, color='red', label='Optimal Threshold')
+    plt.text(optimal_fpr, optimal_tpr - 0.05, f'Threshold = {optimal_threshold:.4f}', color='red')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate (1 - Specificity)')
+    plt.ylabel('True Positive Rate (Sensitivity)')
+    plt.title(f'Receiver Operating Characteristic (ROC) Curve\nPredicting {x_column} using {y_label}')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.show()
+
+    # Prepare results
+    results = {
+        'AUC': roc_auc,
+        'optimal_threshold': optimal_threshold,
+        'optimal_tpr': optimal_tpr,
+        'optimal_fpr': optimal_fpr,
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall (sensitivity)': recall,
+        'specificity': specificity,
+        'f1_score': f1,
+        'confusion_matrix': cm,
+        'shift_value': shift_value,
+        'log_transform': log_transform,
+        'log_base': log_base,
+        'y_label': y_label
+    }
+
+    # Print results
+    print("ROC Analysis Results:")
+    print(f"AUC: {roc_auc:.4f}")
+    print(f"Optimal Threshold: {optimal_threshold:.4f}")
+    print(f"True Positive Rate at Optimal Threshold (Sensitivity): {optimal_tpr:.4f}")
+    print(f"False Positive Rate at Optimal Threshold: {optimal_fpr:.4f}")
+    print(f"Specificity at Optimal Threshold: {specificity:.4f}")
+    print(f"Accuracy at Optimal Threshold: {accuracy:.4f}")
+    print(f"Precision at Optimal Threshold: {precision:.4f}")
+    print(f"Recall (Sensitivity) at Optimal Threshold: {recall:.4f}")
+    print(f"F1 Score at Optimal Threshold: {f1:.4f}")
+    print("\nConfusion Matrix at Optimal Threshold:")
+    print(f"TN: {tn}, FP: {fp}, FN: {fn}, TP: {tp}")
+    if log_transform:
+        print(f"\nLogarithmic transformation applied using base {log_base}.")
+        if shift_value != 0:
+            print(f"Data shifted by {shift_value:.5f} before log transformation.")
+    else:
+        print("\nNo logarithmic transformation applied.")
+
+    return results
+
+
+def perform_logistic_regression(df, y_column, x_column, log_transform=False, log_base=np.e,
+                                threshold=None):
+    """
+    Performs logistic regression analysis on a continuous predictor variable to predict a binary outcome variable.
+    Optionally applies logarithmic transformation to the predictor variable and allows setting a classification threshold.
+    Generates textual output including the confusion matrix with labels.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous predictor variable.
+    - x_column (str): The name of the binary outcome variable.
+    - log_transform (bool): Whether to apply logarithmic transformation to y_column (default is False).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+    - threshold (float): Classification threshold for predicted probabilities (default is 0.5 or optimal threshold).
+
+    Returns:
+    - results (dict): A dictionary containing model summary, coefficients, performance metrics, and other information.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Handle zero or negative values before log transformation
+    shift_value = 0
+    if log_transform:
+        X = data[y_column].copy()
+        if (X <= 0).any():
+            min_positive = X[X > 0].min()
+            shift_value = min_positive / 2
+            X = X + shift_value
+            print(f"Data in '{y_column}' contains zero or negative values. "
+                  f"Shifting data by {shift_value:.5f} before log transformation.")
+        # Apply log transformation
+        if log_base == np.e:
+            X = np.log(X)
+            x_label = f'ln({y_column})'
+        elif log_base == 10:
+            X = np.log10(X)
+            x_label = f'log₁₀({y_column})'
+        elif log_base == 2:
+            X = np.log2(X)
+            x_label = f'log₂({y_column})'
+        else:
+            X = np.log(X) / np.log(log_base)
+            x_label = f'log base {log_base} of {y_column}'
+    else:
+        X = data[y_column]
+        x_label = y_column
+
+    # Prepare the data
+    y = data[x_column]
+
+    # Encode the binary outcome variable if necessary
+    if y.dtype == 'object' or y.dtype == 'bool':
+        unique_classes = y.unique()
+        if len(unique_classes) != 2:
+            raise ValueError(f"Column '{x_column}' must have exactly two unique values.")
+        y = y.map({unique_classes[0]: 0, unique_classes[1]: 1})
+    elif set(y.unique()) != {0, 1}:
+        # Map the smallest value to 0 and the largest to 1
+        unique_values = sorted(y.unique())
+        if len(unique_values) != 2:
+            raise ValueError(f"Column '{x_column}' must have exactly two unique values.")
+        y = y.map({unique_values[0]: 0, unique_values[1]: 1})
+
+    # Add a constant term for the intercept
+    X_const = sm.add_constant(X)
+
+    # Fit logistic regression model
+    model = sm.Logit(y, X_const)
+    try:
+        result = model.fit(disp=False)
+    except Exception as e:
+        print(f"Error fitting logistic regression model: {e}")
+        return None
+
+    # Get model predictions
+    y_pred_prob = result.predict(X_const)
+
+    # Determine the classification threshold
+    if threshold is None:
+        # Find the optimal threshold using Youden's Index
+        fpr, tpr, thresholds = roc_curve(y, y_pred_prob)
+        youden_index = tpr - fpr
+        optimal_idx = np.argmax(youden_index)
+        optimal_threshold = thresholds[optimal_idx]
+        threshold = optimal_threshold
+        threshold_info = f"Optimal threshold (Youden's Index): {threshold:.4f}"
+    else:
+        # Ensure the threshold is between 0 and 1
+        if not (0 <= threshold <= 1):
+            raise ValueError("Threshold must be between 0 and 1.")
+        threshold_info = f"User-specified threshold: {threshold:.4f}"
+
+    # Apply the classification threshold
+    y_pred = (y_pred_prob >= threshold).astype(int)
+
+    # Calculate performance metrics
+    accuracy = accuracy_score(y, y_pred)
+    precision = precision_score(y, y_pred, zero_division=0)
+    recall = recall_score(y, y_pred, zero_division=0)
+    f1 = f1_score(y, y_pred, zero_division=0)
+
+    # Compute confusion matrix with specified labels
+    cm = confusion_matrix(y, y_pred, labels=[0, 1])
+    tn, fp, fn, tp = cm.ravel()
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+
+    # ROC Curve and AUC
+    fpr, tpr, roc_thresholds = roc_curve(y, y_pred_prob)
+    roc_auc = auc(fpr, tpr)
+
+    # Odds ratios and confidence intervals
+    params = result.params
+    conf = result.conf_int()
+    conf['OR'] = params
+    conf.columns = ['2.5%', '97.5%', 'OR']
+    conf['OR'] = np.exp(conf['OR'])
+    conf['2.5%'] = np.exp(conf['2.5%'])
+    conf['97.5%'] = np.exp(conf['97.5%'])
+
+    # Prepare results
+    results = {
+        'model_summary': result.summary2().as_text(),
+        'coefficients': result.params,
+        'odds_ratios': conf[['OR', '2.5%', '97.5%']],
+        'AIC': result.aic,
+        'BIC': result.bic,
+        'log_likelihood': result.llf,
+        'pseudo_R2': result.prsquared,
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall (sensitivity)': recall,
+        'specificity': specificity,
+        'f1_score': f1,
+        'confusion_matrix': cm,
+        'roc_auc': roc_auc,
+        'threshold': threshold,
+        'threshold_info': threshold_info,
+        'shift_value': shift_value,
+        'log_transform': log_transform,
+        'log_base': log_base,
+        'x_label': x_label
+    }
+
+    # Print results
+    print("Logistic Regression Results:")
+    print(f"Coefficients:\n{result.params}")
+    print(f"\nOdds Ratios and 95% Confidence Intervals:\n{conf[['OR', '2.5%', '97.5%']]}")
+    print(f"\nModel Fit Statistics:")
+    print(f"Log-Likelihood: {result.llf:.4f}")
+    print(f"AIC: {result.aic:.4f}")
+    print(f"BIC: {result.bic:.4f}")
+    print(f"Pseudo R-squared: {result.prsquared:.4f}")
+    print(f"\nClassification Performance at Threshold {threshold:.4f}:")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall (Sensitivity): {recall:.4f}")
+    print(f"Specificity: {specificity:.4f}")
+    print(f"F1 Score: {f1:.4f}")
+    print(f"\nROC AUC: {roc_auc:.4f}")
+    print(f"\n{threshold_info}")
+    if log_transform:
+        print(f"\nLogarithmic transformation applied using base {log_base}.")
+        if shift_value != 0:
+            print(f"Data shifted by {shift_value:.5f} before log transformation.")
+    else:
+        print("\nNo logarithmic transformation applied.")
+
+    # Print confusion matrix with labels
+    cm_df = pd.DataFrame(cm, index=['Actual 0', 'Actual 1'], columns=['Predicted 0', 'Predicted 1'])
+    print("\nConfusion Matrix:")
+    print(cm_df)
+
+    return results
+
+
+
+
+
 
