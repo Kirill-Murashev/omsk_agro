@@ -84,3 +84,8 @@ id_82,55.0711511729475,73.1219425235005,south,south_forest_steppe,Омский �
 id_83,55.0246132121688,73.0633727150179,south,south_forest_steppe,Омский район,7000000,143321,private,agricultural,crop_fodder,70,8,23,1,simple,1,0,2024-08-01,1,1,0,0
 id_84,55.1651208290229,73.3813085610925,south,south_forest_steppe,Омский район,1600000,48000,private,agricultural,crop_fodder,70,13,25,1,simple,1,0,2024-07-26,1,1,1,1
 id_85,54.8041377353214,73.6193547144871,south,south_forest_steppe,Омский район,5600000,91415,private,agricultural,crop_fodder,70,16,34,1,complex,1,0,2024-07-10,1,1,0,0
+id_86,54.8304854414789,73.0551326469262,south,south_forest_steppe,Азовский немецкий национальный район,450000,120000,share,agricultural,crop_fodder,73,21,26,0,unknown,0,0,2024-11-03,0,unknown,0,0
+id_87,54.7821581561359,73.0069701247962,south,south_forest_steppe,Азовский немецкий национальный район,350000,106000,share,agricultural,crop_fodder,73,21,26,0,unknown,0,0,2024-10-30,0,unknown,0,0
+id_88,54.7243139265486,72.9428302891235,south,south_forest_steppe,Азовский немецкий национальный район,400000,40000,private,agricultural,crop_fodder,73,32,37,1,unknown,1,0,2024-10-29,0,unknown,0,0
+id_89,54.7443887920972,73.1348728941816,south,south_forest_steppe,Азовский немецкий национальный район,590000,82000,private,agricultural,crop_fodder,73,32,37,1,unknown,1,0,2024-10-20,0,unknown,0,0
+id_90,54.7632454265325,73.1115881344338,south,south_forest_steppe,Азовский немецкий национальный район,2500000,536000,share,agricultural,crop_fodder,73,21,26,1,unknown,1,0,2024-10-17,0,unknown,0,0

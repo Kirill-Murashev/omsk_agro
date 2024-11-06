@@ -11,8 +11,10 @@ from scipy import stats
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
-from scipy.stats import norm
-from scipy.stats import mannwhitneyu, rankdata, norm
+from scipy.stats import (
+    norm, mannwhitneyu, rankdata,
+    shapiro, t
+)
 import warnings
 from sklearn.metrics import (
     roc_curve, auc, confusion_matrix,
@@ -2208,7 +2210,252 @@ def perform_logistic_regression(df, y_column, x_column, log_transform=False, log
     return results
 
 
+def compare_groups_with_ratios(df, y_column, x_column, log_transform=False, log_base=np.e):
+    """
+    Divides the value of y_column of each observation in Group_1 by the value of y_column of each observation in Group_0.
+    Computes the distribution of ratios, plots the KDE plot combined with normal curve,
+    performs the Shapiro-Wilk test for normality, and calculates mean, median, and confidence interval of the mean.
 
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable.
+    - x_column (str): The name of the binary variable (must have exactly two unique values).
+    - log_transform (bool): Whether to apply logarithmic transformation to y_column (default is False).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - results (dict): A dictionary containing mean, median, confidence interval, and Shapiro-Wilk test results.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Ensure x_column is binary with exactly two unique values
+    unique_values = data[x_column].unique()
+    if len(unique_values) != 2:
+        raise ValueError(f"Column '{x_column}' must have exactly two unique values.")
+    else:
+        # Map the values to 0 and 1 if they are not 0 and 1
+        unique_values = sorted(unique_values)
+        mapping = {unique_values[0]: 0, unique_values[1]: 1}
+        data[x_column] = data[x_column].map(mapping)
+
+    # Optionally apply log transformation to y_column
+    y = data[y_column].copy()
+    shift_value = 0
+    if log_transform:
+        if (y <= 0).any():
+            min_positive = y[y > 0].min()
+            shift_value = min_positive / 2
+            y = y + shift_value
+            print(f"Data in '{y_column}' contains zero or negative values. "
+                  f"Shifting data by {shift_value:.5f} before log transformation.")
+        # Apply log transformation
+        if log_base == np.e:
+            y_transformed = np.log(y)
+        elif log_base == 10:
+            y_transformed = np.log10(y)
+        elif log_base == 2:
+            y_transformed = np.log2(y)
+        else:
+            y_transformed = np.log(y) / np.log(log_base)
+    else:
+        y_transformed = y
+
+    # Split the data into two groups
+    group0 = y_transformed[data[x_column] == 0].values
+    group1 = y_transformed[data[x_column] == 1].values
+
+    # Remove zero values from group0 to prevent division by zero
+    if (group0 == 0).any():
+        group0 = group0[group0 != 0]
+        if len(group0) == 0:
+            raise ValueError("All values in group0 are zero after removing zeros, cannot compute ratios.")
+        print("Zero values detected in group0 (denominator). These have been removed to prevent division by zero.")
+
+    # Create all possible ratios
+    ratios = group1[:, np.newaxis] / group0  # This creates a 2D array of ratios
+    ratios = ratios.flatten()
+
+    # Remove any infinities or NaNs that may arise
+    ratios = ratios[np.isfinite(ratios)]
+
+    # Calculate mean, median, and confidence interval of the mean
+    mean_ratio = np.mean(ratios)
+    median_ratio = np.median(ratios)
+    std_ratio = np.std(ratios, ddof=1)
+    n = len(ratios)
+    alpha = 0.05  # 95% confidence interval
+    t_crit = t.ppf(1 - alpha/2, df=n-1)
+    margin_of_error = t_crit * std_ratio / np.sqrt(n)
+    ci_lower = mean_ratio - margin_of_error
+    ci_upper = mean_ratio + margin_of_error
+
+    # Perform Shapiro-Wilk test for normality
+    shapiro_stat, shapiro_p = shapiro(ratios)
+
+    # Plot KDE plot of ratios with normal curve
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(ratios, label='Ratios KDE', shade=True, color='blue')
+    # Overlay normal distribution
+    x_values = np.linspace(min(ratios), max(ratios), 1000)
+    normal_pdf = norm.pdf(x_values, loc=mean_ratio, scale=std_ratio)
+    plt.plot(x_values, normal_pdf, label='Normal PDF', color='red', linestyle='--')
+    plt.title('Distribution of Ratios')
+    plt.xlabel('Ratio')
+    plt.ylabel('Density')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Prepare results
+    results = {
+        'mean_ratio': mean_ratio,
+        'median_ratio': median_ratio,
+        'confidence_interval': (ci_lower, ci_upper),
+        'shapiro_stat': shapiro_stat,
+        'shapiro_p_value': shapiro_p,
+        'n_ratios': n
+    }
+
+    # Print results
+    print(f"Mean of Ratios: {mean_ratio:.4f}")
+    print(f"Median of Ratios: {median_ratio:.4f}")
+    print(f"95% Confidence Interval of Mean: ({ci_lower:.4f}, {ci_upper:.4f})")
+    print(f"Shapiro-Wilk Test Statistic: {shapiro_stat:.4f}")
+    print(f"Shapiro-Wilk Test p-value: {shapiro_p:.4e}")
+    if shapiro_p < 0.05:
+        print("The distribution of ratios is significantly different from normal (reject null hypothesis at alpha=0.05).")
+    else:
+        print("The distribution of ratios is not significantly different from normal (fail to reject null hypothesis at alpha=0.05).")
+
+    return results
+
+
+def compare_groups_with_differences(df, y_column, x_column, log_transform=True, log_base=np.e):
+    """
+    Computes the differences of y_column values between Group_1 and Group_0.
+    For log-transformed data, computes differences which correspond to log ratios.
+    Plots the KDE plot of these differences combined with normal curve,
+    performs the Shapiro-Wilk test for normality, and calculates mean, median, and confidence interval of the mean.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable.
+    - x_column (str): The name of the binary variable (must have exactly two unique values).
+    - log_transform (bool): Whether to apply logarithmic transformation to y_column (default is False).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - results (dict): A dictionary containing mean, median, confidence interval, and Shapiro-Wilk test results.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Ensure x_column is binary with exactly two unique values
+    unique_values = data[x_column].unique()
+    if len(unique_values) != 2:
+        raise ValueError(f"Column '{x_column}' must have exactly two unique values.")
+    else:
+        # Map the values to 0 and 1 if they are not 0 and 1
+        unique_values = sorted(unique_values)
+        mapping = {unique_values[0]: 0, unique_values[1]: 1}
+        data[x_column] = data[x_column].map(mapping)
+
+    # Optionally apply log transformation to y_column
+    y = data[y_column].copy()
+    shift_value = 0
+    if log_transform:
+        if (y <= 0).any():
+            min_positive = y[y > 0].min()
+            shift_value = min_positive / 2
+            y = y + shift_value
+            print(f"Data in '{y_column}' contains zero or negative values. "
+                  f"Shifting data by {shift_value:.5f} before log transformation.")
+        # Apply log transformation
+        if log_base == np.e:
+            y_transformed = np.log(y)
+        elif log_base == 10:
+            y_transformed = np.log10(y)
+        elif log_base == 2:
+            y_transformed = np.log2(y)
+        else:
+            y_transformed = np.log(y) / np.log(log_base)
+    else:
+        y_transformed = y
+
+    # Split the data into two groups
+    group0 = y_transformed[data[x_column] == 0].values
+    group1 = y_transformed[data[x_column] == 1].values
+
+    # Create all possible differences
+    differences = group1[:, np.newaxis] - group0  # This creates a 2D array of differences
+    differences = differences.flatten()
+
+    # Remove any NaNs that may arise
+    differences = differences[np.isfinite(differences)]
+
+    # Calculate mean, median, and confidence interval of the mean
+    mean_diff = np.mean(differences)
+    median_diff = np.median(differences)
+    std_diff = np.std(differences, ddof=1)
+    n = len(differences)
+    alpha = 0.05  # 95% confidence interval
+    t_crit = t.ppf(1 - alpha/2, df=n-1)
+    margin_of_error = t_crit * std_diff / np.sqrt(n)
+    ci_lower = mean_diff - margin_of_error
+    ci_upper = mean_diff + margin_of_error
+
+    # Perform Shapiro-Wilk test for normality
+    shapiro_stat, shapiro_p = shapiro(differences)
+
+    # Plot KDE plot of differences with normal curve
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(differences, label='Differences KDE', shade=True, color='blue')
+    # Overlay normal distribution
+    x_values = np.linspace(min(differences), max(differences), 1000)
+    normal_pdf = norm.pdf(x_values, loc=mean_diff, scale=std_diff)
+    plt.plot(x_values, normal_pdf, label='Normal PDF', color='red', linestyle='--')
+    plt.title('Distribution of Differences')
+    plt.xlabel('Difference')
+    plt.ylabel('Density')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Prepare results
+    results = {
+        'mean_difference': mean_diff,
+        'median_difference': median_diff,
+        'confidence_interval': (ci_lower, ci_upper),
+        'shapiro_stat': shapiro_stat,
+        'shapiro_p_value': shapiro_p,
+        'n_differences': n
+    }
+
+    # Print results
+    print(f"Mean of Differences: {mean_diff:.4f}")
+    print(f"Median of Differences: {median_diff:.4f}")
+    print(f"95% Confidence Interval of Mean: ({ci_lower:.4f}, {ci_upper:.4f})")
+    print(f"Shapiro-Wilk Test Statistic: {shapiro_stat:.4f}")
+    print(f"Shapiro-Wilk Test p-value: {shapiro_p:.4e}")
+    if shapiro_p < 0.05:
+        print("The distribution of differences is significantly different from normal (reject null hypothesis at alpha=0.05).")
+    else:
+        print("The distribution of differences is not significantly different from normal (fail to reject null hypothesis at alpha=0.05).")
+
+    return results
 
 
 
