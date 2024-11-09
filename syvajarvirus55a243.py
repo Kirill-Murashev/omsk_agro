@@ -2458,4 +2458,42 @@ def compare_groups_with_differences(df, y_column, x_column, log_transform=True, 
     return results
 
 
+def create_binary_column(df, shape_column, binary_column_name, value_for_one, value_for_zero, na_values=None):
+    """
+    Creates a new binary column in the DataFrame based on the values in the shape column.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing your data.
+    - shape_column (str): The name of the column with shape values.
+    - binary_column_name (str): The desired name for the new binary column.
+    - value_for_one: The value in shape_column to consider as 1.
+    - value_for_zero: The value in shape_column to consider as 0.
+    - na_values (optional): A single value or a list of values in shape_column to consider as NA.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with the new binary column added.
+    """
+
+    # Copy the DataFrame to avoid modifying the original
+    df = df.copy()
+
+    # Define mapping based on provided values
+    mapping = {value_for_one: 1, value_for_zero: 0}
+
+    # Map the shape_column to create the binary column
+    df[binary_column_name] = df[shape_column].map(mapping)
+
+    # Handle NA values
+    if na_values is not None:
+        if not isinstance(na_values, list):
+            na_values = [na_values]
+        # Set specified na_values to NaN in the binary column
+        df.loc[df[shape_column].isin(na_values), binary_column_name] = pd.NA
+
+    # Warn if there are unmapped values
+    unmapped_values = df[shape_column][df[binary_column_name].isna() & ~df[shape_column].isin(na_values)].unique()
+    if len(unmapped_values) > 0:
+        print(f"Warning: The following values in '{shape_column}' were not mapped and set to NaN in '{binary_column_name}': {unmapped_values}")
+
+    return df
 
