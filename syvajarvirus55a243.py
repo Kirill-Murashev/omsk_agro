@@ -10,6 +10,7 @@ import seaborn as sns
 from scipy import stats
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
 from scipy.stats import (
     norm, mannwhitneyu, rankdata,
@@ -21,6 +22,21 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, classification_report
 )
+import scikit_posthocs as sp
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+from statsmodels.stats.anova import AnovaRM
+from statsmodels.stats.libqsturng import psturng
+from statsmodels.formula.api import ols
+from scipy.stats import kruskal
+from sklearn.model_selection import StratifiedKFold, cross_val_score, cross_validate
+from sklearn.feature_selection import RFECV
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
+                             confusion_matrix, roc_auc_score, roc_curve)
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.tools import add_constant
+from sklearn.impute import SimpleImputer
+from scipy.stats import chi2
 
 
 def clean_gdf(gdf):
@@ -1339,6 +1355,14 @@ def perform_linear_regression(
             print(f"Column '{col}' not found in the DataFrame.")
             return
 
+    # Convert columns to appropriate numeric types
+    # For boolean columns, convert to int
+    for col in all_columns:
+        if df[col].dtype == 'bool':
+            df[col] = df[col].astype(int)
+        else:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
     # Extract the data and drop missing values
     data = df[all_columns].dropna()
     Y = data[y_column].copy()
@@ -2496,4 +2520,870 @@ def create_binary_column(df, shape_column, binary_column_name, value_for_one, va
         print(f"Warning: The following values in '{shape_column}' were not mapped and set to NaN in '{binary_column_name}': {unmapped_values}")
 
     return df
+
+
+def create_zone_groups(df, agricultural_zone_col='agricultural_zone', district_col='district',
+                       new_col_name='zone_group', specific_zone='south_forest_steppe',
+                       specific_district_value='Омский район'):
+    """
+    Adds a new column to the DataFrame that partitions observations into five groups based on
+    agricultural_zone and district.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - agricultural_zone_col (str): The name of the agricultural zone column.
+    - district_col (str): The name of the district column.
+    - new_col_name (str): The name of the new column to create.
+    - specific_zone (str): The agricultural zone to check for the specific district.
+    - specific_district_value (str): The value in district_col that identifies the specific district.
+
+    Returns:
+    - df (DataFrame): The DataFrame with the new zone_group column added.
+    """
+
+    # Check if the necessary columns exist
+    if agricultural_zone_col not in df.columns:
+        raise ValueError(f"Column '{agricultural_zone_col}' not found in the DataFrame.")
+    if district_col not in df.columns:
+        raise ValueError(f"Column '{district_col}' not found in the DataFrame.")
+
+    # Define a function to assign the zone group
+    def assign_zone_group(row):
+        zone = row[agricultural_zone_col]
+        district = row[district_col]
+
+        if zone == 'north_zone':
+            return 'north'
+        elif zone == 'north_forest_steppe':
+            return 'north'
+        elif zone == 'steppe':
+            return 'steppe'
+        elif zone == 'south_forest_steppe':
+            if district == specific_district_value:
+                return 'omskiy'
+            else:
+                return 'south_forest_steppe'
+        else:
+            return 'unknown'
+
+    # Apply the function to each row to create the new column
+    df[new_col_name] = df.apply(assign_zone_group, axis=1)
+
+    # Optional: Handle any 'unknown' values
+    if (df[new_col_name] == 'unknown').any():
+        print("Warning: Some observations have an 'unknown' zone_group. Please check the data for inconsistencies.")
+
+    return df
+
+
+def plot_violin_comparison_multigroup(df, y_column, x_column, figsize=(14, 6), log_base=np.e):
+    """
+    Plots paired violin plots for raw and log-transformed data of a continuous variable Y,
+    grouped by a categorical variable X with multiple categories.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable (Y).
+    - x_column (str): The name of the categorical variable (X).
+    - figsize (tuple): The size of the figure (default is (14, 6)).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - None
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        print(f"Column '{y_column}' not found in the DataFrame.")
+        return
+    if x_column not in df.columns:
+        print(f"Column '{x_column}' not found in the DataFrame.")
+        return
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Prepare data for raw Y
+    data_raw = data.copy()
+
+    # Prepare data for log-transformed Y
+    data_log = data.copy()
+
+    # Handle zero or negative values in Y before log transformation
+    if (data_log[y_column] <= 0).any():
+        min_positive = data_log[y_column][data_log[y_column] > 0].min()
+        shift_value = min_positive / 2
+        data_log[y_column] = data_log[y_column] + shift_value
+        print(f"Data in '{y_column}' contains zero or negative values. "
+              f"Shifting data by {shift_value:.5f} before log transformation.")
+
+    # Apply log transformation
+    if log_base == np.e:
+        data_log[y_column] = np.log(data_log[y_column])
+        y_label_log = f'ln({y_column})'
+    elif log_base == 10:
+        data_log[y_column] = np.log10(data_log[y_column])
+        y_label_log = f'log₁₀({y_column})'
+    elif log_base == 2:
+        data_log[y_column] = np.log2(data_log[y_column])
+        y_label_log = f'log₂({y_column})'
+    else:
+        data_log[y_column] = np.log(data_log[y_column]) / np.log(log_base)
+        y_label_log = f'log base {log_base} of {y_column}'
+
+    # Create figure with two subplots
+    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=False)
+
+    # Plot violin plot for raw data
+    sns.violinplot(x=x_column, y=y_column, data=data_raw, ax=axes[0], palette="Set2")
+    axes[0].set_title(f'Distribution of {y_column} by {x_column} (Raw Data)')
+    axes[0].set_xlabel(x_column)
+    axes[0].set_ylabel(y_column)
+
+    # Annotate with summary statistics
+    medians_raw = data_raw.groupby(x_column)[y_column].median()
+    for tick, label in zip(axes[0].get_xticks(), axes[0].get_xticklabels()):
+        category = label.get_text()
+        median = medians_raw[category]
+        axes[0].text(tick, median, f'Median: {median:.2f}', horizontalalignment='center',
+                     color='black', weight='semibold', va='bottom')
+
+    # Plot violin plot for log-transformed data
+    sns.violinplot(x=x_column, y=y_column, data=data_log, ax=axes[1], palette="Set2")
+    axes[1].set_title(f'Distribution of {y_label_log} by {x_column} (Log-Transformed Data)')
+    axes[1].set_xlabel(x_column)
+    axes[1].set_ylabel(y_label_log)
+
+    # Annotate with summary statistics
+    medians_log = data_log.groupby(x_column)[y_column].median()
+    for tick, label in zip(axes[1].get_xticks(), axes[1].get_xticklabels()):
+        category = label.get_text()
+        median = medians_log[category]
+        axes[1].text(tick, median, f'Median: {median:.2f}', horizontalalignment='center',
+                     color='black', weight='semibold', va='bottom')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_kde_comparison_multigroup(df, y_column, x_column, figsize=(14, 6), log_base=np.e):
+    """
+    Plots KDE plots for raw and log-transformed data of a continuous variable Y,
+    including the whole population and each group defined by a categorical variable X with multiple categories.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable (Y).
+    - x_column (str): The name of the categorical variable (X).
+    - figsize (tuple): The size of the figure (default is (14, 6)).
+    - log_base (float): The base of the logarithm for transformation (default is natural logarithm).
+
+    Returns:
+    - None
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        print(f"Column '{y_column}' not found in the DataFrame.")
+        return
+    if x_column not in df.columns:
+        print(f"Column '{x_column}' not found in the DataFrame.")
+        return
+
+    # Drop missing values
+    data = df[[y_column, x_column]].dropna()
+
+    # Handle zero or negative values in Y before log transformation
+    data_log = data.copy()
+    if (data_log[y_column] <= 0).any():
+        min_positive = data_log[y_column][data_log[y_column] > 0].min()
+        shift_value = min_positive / 2
+        data_log[y_column] = data_log[y_column] + shift_value
+        print(f"Data in '{y_column}' contains zero or negative values. "
+              f"Shifting data by {shift_value:.5f} before log transformation.")
+
+    # Apply log transformation
+    if log_base == np.e:
+        data_log[y_column] = np.log(data_log[y_column])
+        y_label_log = f'ln({y_column})'
+    elif log_base == 10:
+        data_log[y_column] = np.log10(data_log[y_column])
+        y_label_log = f'log₁₀({y_column})'
+    elif log_base == 2:
+        data_log[y_column] = np.log2(data_log[y_column])
+        y_label_log = f'log₂({y_column})'
+    else:
+        data_log[y_column] = np.log(data_log[y_column]) / np.log(log_base)
+        y_label_log = f'log base {log_base} of {y_column}'
+
+    # Create figure with two subplots
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
+
+    # Plot KDE for raw data
+    ax = axes[0]
+    sns.kdeplot(data[y_column], label='Whole Population', ax=ax, color='black', linewidth=2)
+
+    categories = data[x_column].unique()
+    palette = sns.color_palette('Set2', len(categories))
+    for idx, category in enumerate(categories):
+        sns.kdeplot(data[data[x_column]==category][y_column], label=f'{x_column}={category}', ax=ax, color=palette[idx])
+
+    # Plot normal curve for the whole population
+    mean = data[y_column].mean()
+    std = data[y_column].std()
+    x_vals = np.linspace(data[y_column].min(), data[y_column].max(), 200)
+    normal_curve = norm.pdf(x_vals, mean, std)
+    # Scale the normal curve to match the KDE peak
+    scaling_factor = max(ax.lines[0].get_data()[1]) / max(normal_curve)
+    normal_curve *= scaling_factor
+    ax.plot(x_vals, normal_curve, color='red', linestyle='--', label='Normal Curve')
+    ax.set_title(f'Distribution of {y_column} (Raw Data)')
+    ax.set_xlabel(y_column)
+    ax.set_ylabel('Density')
+    ax.legend()
+
+    # Plot KDE for log-transformed data
+    ax = axes[1]
+    sns.kdeplot(data_log[y_column], label='Whole Population', ax=ax, color='black', linewidth=2)
+
+    for idx, category in enumerate(categories):
+        sns.kdeplot(data_log[data_log[x_column]==category][y_column], label=f'{x_column}={category}', ax=ax, color=palette[idx])
+
+    # Plot normal curve for the whole population
+    mean = data_log[y_column].mean()
+    std = data_log[y_column].std()
+    x_vals = np.linspace(data_log[y_column].min(), data_log[y_column].max(), 200)
+    normal_curve = norm.pdf(x_vals, mean, std)
+    # Scale the normal curve to match the KDE peak
+    scaling_factor = max(ax.lines[0].get_data()[1]) / max(normal_curve)
+    normal_curve *= scaling_factor
+    ax.plot(x_vals, normal_curve, color='red', linestyle='--', label='Normal Curve')
+    ax.set_title(f'Distribution of {y_label_log} (Log-Transformed Data)')
+    ax.set_xlabel(y_label_log)
+    ax.set_ylabel('Density')
+    ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+def test_normality_by_group(df, y_column, x_column, log_transform=True, log_base=np.e):
+    """
+    Performs the Shapiro-Wilk normality test on a continuous variable within each group defined by a categorical variable.
+    Optionally applies a logarithmic transformation to the continuous variable.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable.
+    - x_column (str): The name of the categorical grouping variable.
+    - log_transform (bool): Whether to perform log transformation on the continuous variable (default is True).
+    - log_base (float): The base of the logarithm (default is natural logarithm).
+
+    Returns:
+    - results_df (DataFrame): A DataFrame summarizing the Shapiro-Wilk test results for each group.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Drop missing values in y_column and x_column
+    data = df[[y_column, x_column]].dropna()
+
+    # List to store results
+    normality_results = []
+
+    # Iterate over each group in x_column
+    for group_name, group_data in data.groupby(x_column):
+        y_data = group_data[y_column].dropna()
+
+        # Check if the group has at least 3 observations
+        n_obs = len(y_data)
+        if n_obs < 3:
+            print(f"Group '{group_name}': Not enough data to perform Shapiro-Wilk test (n = {n_obs}). Skipping this group.")
+            # Optionally, you can still provide basic statistics
+            mean_value = y_data.mean()
+            median_value = y_data.median()
+            normality_results.append({
+                'group': group_name,
+                'n': n_obs,
+                'mean_raw': mean_value,
+                'median_raw': median_value,
+                'statistic_raw': np.nan,
+                'p_value_raw': np.nan,
+                'mean_log': np.nan,
+                'median_log': np.nan,
+                'statistic_log': np.nan,
+                'p_value_log': np.nan
+            })
+            continue  # Skip to the next group
+
+        # Handle zero or negative values before log transformation
+        y_data_log = y_data.copy()
+        shift_value = 0
+        if log_transform:
+            if (y_data_log <= 0).any():
+                min_positive = y_data_log[y_data_log > 0].min()
+                shift_value = min_positive / 2
+                y_data_log = y_data_log + shift_value
+                print(f"Group '{group_name}': Data contains zero or negative values. "
+                      f"Shifting data by {shift_value:.5f} before log transformation.")
+            # Apply log transformation
+            if log_base == np.e:
+                y_data_log = np.log(y_data_log)
+            elif log_base == 10:
+                y_data_log = np.log10(y_data_log)
+            elif log_base == 2:
+                y_data_log = np.log2(y_data_log)
+            else:
+                y_data_log = np.log(y_data_log) / np.log(log_base)
+        else:
+            y_data_log = y_data_log  # No transformation
+
+        # Perform Shapiro-Wilk test on raw data
+        stat_raw, p_value_raw = shapiro(y_data)
+
+        # Perform Shapiro-Wilk test on log-transformed data
+        stat_log, p_value_log = shapiro(y_data_log)
+
+        # Store the results
+        normality_results.append({
+            'group': group_name,
+            'n': n_obs,
+            'mean_raw': y_data.mean(),
+            'median_raw': y_data.median(),
+            'statistic_raw': stat_raw,
+            'p_value_raw': p_value_raw,
+            'mean_log': y_data_log.mean() if log_transform else np.nan,
+            'median_log': y_data_log.median() if log_transform else np.nan,
+            'statistic_log': stat_log,
+            'p_value_log': p_value_log
+        })
+
+    # Convert results to DataFrame
+    results_df = pd.DataFrame(normality_results)
+
+    # Print the results
+    for idx, row in results_df.iterrows():
+        group_name = row['group']
+        n_obs = row['n']
+        print(f"\nGroup: {group_name} (n = {n_obs})")
+        print(f"Mean (raw): {row['mean_raw']:.4f}, Median (raw): {row['median_raw']:.4f}")
+        if n_obs >= 3:
+            print(f"Shapiro-Wilk Test for Raw '{y_column}': Statistic={row['statistic_raw']:.4f}, p-value={row['p_value_raw']:.4e}")
+            if row['p_value_raw'] < 0.05:
+                print("Raw data is NOT normally distributed (reject H0).")
+            else:
+                print("Raw data is approximately normally distributed (fail to reject H0).")
+            if log_transform:
+                print(f"Mean (log): {row['mean_log']:.4f}, Median (log): {row['median_log']:.4f}")
+                print(f"Shapiro-Wilk Test for Log-Transformed '{y_column}': Statistic={row['statistic_log']:.4f}, p-value={row['p_value_log']:.4e}")
+                if row['p_value_log'] < 0.05:
+                    print("Log-transformed data is NOT normally distributed (reject H0).")
+                else:
+                    print("Log-transformed data is approximately normally distributed (fail to reject H0).")
+        else:
+            print("Not enough data to perform Shapiro-Wilk test.")
+
+    return results_df
+
+
+def compare_groups_statistical_tests(df, y_column, x_column, log_transform=True, log_base=np.e, alpha=0.05):
+    """
+    Performs One-Way ANOVA and Kruskal-Wallis tests on a continuous variable across multiple groups.
+    Optionally applies logarithmic transformation to the continuous variable.
+    Provides detailed metrics and post-hoc tests.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data.
+    - y_column (str): The name of the continuous variable.
+    - x_column (str): The name of the categorical grouping variable.
+    - log_transform (bool): Whether to perform log transformation on the continuous variable (default is True).
+    - log_base (float): The base of the logarithm (default is natural logarithm).
+    - alpha (float): Significance level for statistical tests (default is 0.05).
+
+    Returns:
+    - results (dict): A dictionary containing ANOVA and Kruskal-Wallis test results and summaries.
+    """
+    # Check if columns exist
+    if y_column not in df.columns:
+        raise ValueError(f"Column '{y_column}' not found in the DataFrame.")
+    if x_column not in df.columns:
+        raise ValueError(f"Column '{x_column}' not found in the DataFrame.")
+
+    # Drop missing values in y_column and x_column
+    data = df[[y_column, x_column]].dropna()
+
+    # Handle zero or negative values before log transformation
+    y_data = data[y_column].copy()
+    shift_value = 0
+    if log_transform:
+        if (y_data <= 0).any():
+            min_positive = y_data[y_data > 0].min()
+            shift_value = min_positive / 2
+            y_data = y_data + shift_value
+            print(f"Data contains zero or negative values. Shifting data by {shift_value:.5f} before log transformation.")
+        # Apply log transformation
+        if log_base == np.e:
+            y_data_transformed = np.log(y_data)
+        elif log_base == 10:
+            y_data_transformed = np.log10(y_data)
+        elif log_base == 2:
+            y_data_transformed = np.log2(y_data)
+        else:
+            y_data_transformed = np.log(y_data) / np.log(log_base)
+        y_label = f'log-transformed {y_column}'
+    else:
+        y_data_transformed = y_data
+        y_label = y_column
+
+    data_transformed = data.copy()
+    data_transformed[y_column] = y_data_transformed
+
+    # Prepare the results dictionary
+    results = {}
+
+    # ----------------------------
+    # One-Way ANOVA
+    # ----------------------------
+    print("\n=== One-Way ANOVA ===")
+    model_formula = f'{y_column} ~ C({x_column})'
+    model = ols(model_formula, data=data_transformed).fit()
+    anova_table = sm.stats.anova_lm(model, typ=2)
+
+    # Add effect size (eta squared)
+    anova_table['eta_sq'] = anova_table['sum_sq'] / sum(anova_table['sum_sq'])
+
+    print("\nANOVA Table:")
+    print(anova_table)
+
+    # Save ANOVA results
+    results['anova'] = anova_table
+
+    # Check if ANOVA is significant
+    p_value_anova = anova_table['PR(>F)'][0]
+    if p_value_anova < alpha:
+        print(f"\nANOVA is significant (p = {p_value_anova:.4e}). Proceeding with post-hoc tests.")
+
+        # Post-hoc test: Tukey's HSD
+        print("\nPost-hoc Test (Tukey's HSD):")
+        tukey = pairwise_tukeyhsd(endog=y_data_transformed, groups=data_transformed[x_column], alpha=alpha)
+        print(tukey)
+        results['anova_posthoc'] = tukey
+    else:
+        print(f"\nANOVA is not significant (p = {p_value_anova:.4e}). No post-hoc tests performed.")
+
+    # ----------------------------
+    # Kruskal-Wallis Test
+    # ----------------------------
+    print("\n=== Kruskal-Wallis Test ===")
+    groups = [group[y_column].values for name, group in data.groupby(x_column)]
+    kruskal_stat, kruskal_p = kruskal(*groups)
+
+    print(f"\nKruskal-Wallis H-statistic: {kruskal_stat:.4f}, p-value: {kruskal_p:.4e}")
+    results['kruskal'] = {'H-statistic': kruskal_stat, 'p-value': kruskal_p}
+
+    if kruskal_p < alpha:
+        print("Kruskal-Wallis test is significant. Proceeding with post-hoc tests.")
+
+        # Post-hoc test: Dunn's test with Bonferroni correction
+        print("\nPost-hoc Test (Dunn's Test with Bonferroni correction):")
+        posthoc = sp.posthoc_dunn(data, val_col=y_column, group_col=x_column, p_adjust='bonferroni')
+        print(posthoc)
+        results['kruskal_posthoc'] = posthoc
+    else:
+        print("Kruskal-Wallis test is not significant. No post-hoc tests performed.")
+
+    # ----------------------------
+    # Additional Metrics
+    # ----------------------------
+    print("\n=== Descriptive Statistics ===")
+    descriptive_stats = data.groupby(x_column)[y_column].agg(['count', 'mean', 'std', 'median'])
+    print(descriptive_stats)
+    results['descriptive_stats'] = descriptive_stats
+
+    if log_transform:
+        print("\nDescriptive Statistics for Log-Transformed Data:")
+        descriptive_stats_transformed = data_transformed.groupby(x_column)[y_column].agg(['count', 'mean', 'std', 'median'])
+        print(descriptive_stats_transformed)
+        results['descriptive_stats_log'] = descriptive_stats_transformed
+
+    return results
+
+
+def predict_ownership_type(df, y_column, x_columns,
+                        log_transform_vars=None,
+                        test_size=0.2,
+                        random_state=None):
+    # Copy the DataFrame to avoid modifying the original data
+    df = df.copy()
+
+    # Step 1: Split rows with known and unknown values of ownership
+    df_known = df[df[y_column].isin(['private', 'share'])].copy()
+    df_unknown = df[df[y_column] == 'unknown'].copy()
+
+    # Convert the target variable to binary: 'private' = 1, 'share' = 0
+    df_known['ownership_binary'] = df_known[y_column].map({'private': 1, 'share': 0})
+
+    # Step 2: Check the balancing of classes in training set
+    class_counts = df_known['ownership_binary'].value_counts()
+    print("Class distribution in the training set:")
+    print(class_counts)
+
+    # Combine known and unknown data for consistent preprocessing
+    df_combined = pd.concat([df_known, df_unknown], sort=False)
+
+    # Handle continuous and binary variables
+    continuous_vars = x_columns.get('continuous', [])
+    binary_vars = x_columns.get('binary', [])
+
+    # Log-transform specified continuous variables
+    if log_transform_vars:
+        for var in log_transform_vars:
+            if var in continuous_vars:
+                # Handle zeros or negative values
+                if (df_combined[var] <= 0).any():
+                    shift_value = df_combined[var][df_combined[var] > 0].min() / 2
+                    df_combined[var] = df_combined[var] + shift_value
+                    print(f"Shifted variable '{var}' by {shift_value} to handle non-positive values for log transformation.")
+                df_combined[var] = np.log(df_combined[var])
+            else:
+                print(f"Warning: Variable '{var}' specified for log transformation is not in continuous variables.")
+
+    # Ensure binary variables are numeric
+    for var in binary_vars:
+        if df_combined[var].dtype == 'bool':
+            df_combined[var] = df_combined[var].astype(int)
+        elif df_combined[var].dtype == 'object':
+            # If binary variables are strings representing categories, map them to 0 and 1
+            unique_vals = df_combined[var].dropna().unique()
+            if len(unique_vals) == 2:
+                df_combined[var] = df_combined[var].map({unique_vals[0]: 0, unique_vals[1]: 1})
+                print(f"Binary variable '{var}' mapped to 0 and 1.")
+            else:
+                print(f"Error: Binary variable '{var}' does not have exactly two unique values.")
+
+    # Separate the combined data back into known and unknown
+    df_known = df_combined[df_combined[y_column].isin(['private', 'share'])].copy()
+    df_unknown = df_combined[df_combined[y_column] == 'unknown'].copy()
+
+    # Prepare the feature matrix X and target vector y
+    X = df_known[continuous_vars + binary_vars]
+    y = df_known['ownership_binary']
+
+    # Handle missing values in X
+    imputer_continuous = SimpleImputer(strategy='mean')
+    imputer_binary = SimpleImputer(strategy='most_frequent')
+
+    X_continuous = X[continuous_vars]
+    X_binary = X[binary_vars]
+
+    # Impute continuous variables with index preservation
+    X_continuous_imputed = pd.DataFrame(imputer_continuous.fit_transform(X_continuous),
+                                        index=X_continuous.index, columns=continuous_vars)
+
+    # Standardize continuous variables with index preservation
+    scaler = StandardScaler()
+    X_continuous_scaled = pd.DataFrame(scaler.fit_transform(X_continuous_imputed),
+                                       index=X_continuous_imputed.index, columns=continuous_vars)
+
+    # Impute binary variables with index preservation
+    X_binary_imputed = pd.DataFrame(imputer_binary.fit_transform(X_binary),
+                                    index=X_binary.index, columns=binary_vars)
+
+    # Combine continuous and binary variables
+    X_preprocessed = pd.concat([X_continuous_scaled, X_binary_imputed], axis=1)
+
+    # Step 4: Calculate VIF before feature selection
+    X_vif = add_constant(X_preprocessed)
+    vif = pd.DataFrame()
+    vif['feature'] = X_vif.columns
+    vif['VIF'] = [variance_inflation_factor(X_vif.values, i) for i in range(X_vif.shape[1])]
+    print("\nVariance Inflation Factors before feature selection:")
+    print(vif)
+
+    # Step 5: Feature Selection using RFECV with cross-validation
+    logistic = LogisticRegression(max_iter=1000, solver='liblinear', random_state=random_state)
+    rfecv = RFECV(estimator=logistic, step=1, cv=StratifiedKFold(5), scoring='accuracy')
+    rfecv.fit(X_preprocessed, y)
+
+    selected_features = X_preprocessed.columns[rfecv.support_].tolist()
+    print("\nSelected features after RFECV:")
+    print(selected_features)
+
+    # Reduce X to selected features
+    X_selected = X_preprocessed[selected_features]
+
+    # Recalculate VIF after feature selection
+    X_vif_selected = add_constant(X_selected)
+    vif_selected = pd.DataFrame()
+    vif_selected['feature'] = X_vif_selected.columns
+    vif_selected['VIF'] = [variance_inflation_factor(X_vif_selected.values, i) for i in range(X_vif_selected.shape[1])]
+    print("\nVariance Inflation Factors after feature selection:")
+    print(vif_selected)
+
+    # Step 6: Build and Evaluate the Model
+    # Perform cross-validation
+    cv_results = cross_validate(logistic, X_selected, y, cv=StratifiedKFold(5),
+                                scoring=['accuracy', 'precision', 'recall', 'f1'], return_train_score=True)
+
+    # Calculate mean metrics
+    model_metrics = {
+        'mean_train_accuracy': np.mean(cv_results['train_accuracy']),
+        'mean_test_accuracy': np.mean(cv_results['test_accuracy']),
+        'mean_precision': np.mean(cv_results['test_precision']),
+        'mean_recall': np.mean(cv_results['test_recall']),
+        'mean_f1_score': np.mean(cv_results['test_f1'])
+    }
+    print("\nCross-Validation Metrics:")
+    for metric, value in model_metrics.items():
+        print(f"{metric}: {value:.4f}")
+
+    # Check for overfitting
+    train_acc = model_metrics['mean_train_accuracy']
+    test_acc = model_metrics['mean_test_accuracy']
+    if train_acc - test_acc > 0.05:
+        print("\nWarning: The model may be overfitting. Consider revising the model or gathering more data.")
+
+    # Fit the model on the entire training set
+    logistic_final = LogisticRegression(max_iter=1000, solver='liblinear', random_state=random_state)
+    logistic_final.fit(X_selected, y)
+
+    # Calculate Pseudo R-squared (McFadden's R²)
+    X_const = sm.add_constant(X_selected)
+    model_sm = sm.Logit(y, X_const)
+    result_sm = model_sm.fit(disp=False)
+    llf = result_sm.llf  # Log-likelihood of the fitted model
+    llnull = result_sm.llnull  # Log-likelihood of the null model
+    mcfadden_r2 = 1 - (llf / llnull)
+    print(f"\nMcFadden's R²: {mcfadden_r2:.4f}")
+
+    # Likelihood Ratio Test
+    lr_stat = -2 * (llnull - llf)
+    # Use chi2.sf from scipy.stats to calculate the p-value
+    lr_pvalue = chi2.sf(lr_stat, df=result_sm.df_model)
+    print(f"Likelihood Ratio Test: χ²={lr_stat:.4f}, p-value={lr_pvalue:.4f}")
+
+    # Step 7: Apply the model to the Prediction set
+    X_unknown_continuous = df_unknown[continuous_vars]
+    X_unknown_binary = df_unknown[binary_vars]
+
+    # Impute and scale continuous variables with index preservation
+    X_unknown_continuous_imputed = pd.DataFrame(imputer_continuous.transform(X_unknown_continuous),
+                                                index=X_unknown_continuous.index, columns=continuous_vars)
+    X_unknown_continuous_scaled = pd.DataFrame(scaler.transform(X_unknown_continuous_imputed),
+                                               index=X_unknown_continuous_imputed.index, columns=continuous_vars)
+
+    # Impute binary variables with index preservation
+    X_unknown_binary_imputed = pd.DataFrame(imputer_binary.transform(X_unknown_binary),
+                                            index=X_unknown_binary.index, columns=binary_vars)
+
+    # Combine continuous and binary variables
+    X_unknown_preprocessed = pd.concat([X_unknown_continuous_scaled, X_unknown_binary_imputed], axis=1)
+
+    # Select the same features
+    X_unknown_selected = X_unknown_preprocessed[selected_features]
+
+    # Predict probabilities and classes
+    unknown_probs = logistic_final.predict_proba(X_unknown_selected)[:, 1]
+    unknown_preds = logistic_final.predict(X_unknown_selected)
+
+    # Map predictions back to 'private' and 'share'
+    ownership_predicted = pd.Series(unknown_preds, index=X_unknown_selected.index).map({1: 'private', 0: 'share'})
+
+    # Create a DataFrame with predictions
+    predictions_df = df_unknown.copy()
+    predictions_df['predicted_ownership'] = ownership_predicted.values
+    predictions_df['predicted_probability'] = unknown_probs
+
+    # Return results
+    return predictions_df, model_metrics, logistic_final, selected_features
+
+
+def predict_shape_type(df, y_column, x_columns,
+                        log_transform_vars=None,
+                        test_size=0.2,
+                        random_state=None):
+    # Copy the DataFrame to avoid modifying the original data
+    df = df.copy()
+
+    # Step 1: Split rows with known and unknown values of shape
+    df_known = df[df[y_column].isin(['simple', 'complex'])].copy()
+    df_unknown = df[df[y_column] == 'unknown'].copy()
+
+    # Convert the target variable to binary: 'private' = 1, 'share' = 0
+    df_known['shape_binary'] = df_known[y_column].map({'simple': 1, 'complex': 0})
+
+    # Step 2: Check the balancing of classes in training set
+    class_counts = df_known['shape_binary'].value_counts()
+    print("Class distribution in the training set:")
+    print(class_counts)
+
+    # Combine known and unknown data for consistent preprocessing
+    df_combined = pd.concat([df_known, df_unknown], sort=False)
+
+    # Handle continuous and binary variables
+    continuous_vars = x_columns.get('continuous', [])
+    binary_vars = x_columns.get('binary', [])
+
+    # Log-transform specified continuous variables
+    if log_transform_vars:
+        for var in log_transform_vars:
+            if var in continuous_vars:
+                # Handle zeros or negative values
+                if (df_combined[var] <= 0).any():
+                    shift_value = df_combined[var][df_combined[var] > 0].min() / 2
+                    df_combined[var] = df_combined[var] + shift_value
+                    print(f"Shifted variable '{var}' by {shift_value} to handle non-positive values for log transformation.")
+                df_combined[var] = np.log(df_combined[var])
+            else:
+                print(f"Warning: Variable '{var}' specified for log transformation is not in continuous variables.")
+
+    # Ensure binary variables are numeric
+    for var in binary_vars:
+        if df_combined[var].dtype == 'bool':
+            df_combined[var] = df_combined[var].astype(int)
+        elif df_combined[var].dtype == 'object':
+            # If binary variables are strings representing categories, map them to 0 and 1
+            unique_vals = df_combined[var].dropna().unique()
+            if len(unique_vals) == 2:
+                df_combined[var] = df_combined[var].map({unique_vals[0]: 0, unique_vals[1]: 1})
+                print(f"Binary variable '{var}' mapped to 0 and 1.")
+            else:
+                print(f"Error: Binary variable '{var}' does not have exactly two unique values.")
+
+    # Separate the combined data back into known and unknown
+    df_known = df_combined[df_combined[y_column].isin(['simple', 'complex'])].copy()
+    df_unknown = df_combined[df_combined[y_column] == 'unknown'].copy()
+
+    # Prepare the feature matrix X and target vector y
+    X = df_known[continuous_vars + binary_vars]
+    y = df_known['shape_binary']
+
+    # Handle missing values in X
+    imputer_continuous = SimpleImputer(strategy='mean')
+    imputer_binary = SimpleImputer(strategy='most_frequent')
+
+    X_continuous = X[continuous_vars]
+    X_binary = X[binary_vars]
+
+    # Impute continuous variables with index preservation
+    X_continuous_imputed = pd.DataFrame(imputer_continuous.fit_transform(X_continuous),
+                                        index=X_continuous.index, columns=continuous_vars)
+
+    # Standardize continuous variables with index preservation
+    scaler = StandardScaler()
+    X_continuous_scaled = pd.DataFrame(scaler.fit_transform(X_continuous_imputed),
+                                       index=X_continuous_imputed.index, columns=continuous_vars)
+
+    # Impute binary variables with index preservation
+    X_binary_imputed = pd.DataFrame(imputer_binary.fit_transform(X_binary),
+                                    index=X_binary.index, columns=binary_vars)
+
+    # Combine continuous and binary variables
+    X_preprocessed = pd.concat([X_continuous_scaled, X_binary_imputed], axis=1)
+
+    # Step 4: Calculate VIF before feature selection
+    X_vif = add_constant(X_preprocessed)
+    vif = pd.DataFrame()
+    vif['feature'] = X_vif.columns
+    vif['VIF'] = [variance_inflation_factor(X_vif.values, i) for i in range(X_vif.shape[1])]
+    print("\nVariance Inflation Factors before feature selection:")
+    print(vif)
+
+    # Step 5: Feature Selection using RFECV with cross-validation
+    logistic = LogisticRegression(max_iter=1000, solver='liblinear', random_state=random_state)
+    rfecv = RFECV(estimator=logistic, step=1, cv=StratifiedKFold(5), scoring='accuracy')
+    rfecv.fit(X_preprocessed, y)
+
+    selected_features = X_preprocessed.columns[rfecv.support_].tolist()
+    print("\nSelected features after RFECV:")
+    print(selected_features)
+
+    # Reduce X to selected features
+    X_selected = X_preprocessed[selected_features]
+
+    # Recalculate VIF after feature selection
+    X_vif_selected = add_constant(X_selected)
+    vif_selected = pd.DataFrame()
+    vif_selected['feature'] = X_vif_selected.columns
+    vif_selected['VIF'] = [variance_inflation_factor(X_vif_selected.values, i) for i in range(X_vif_selected.shape[1])]
+    print("\nVariance Inflation Factors after feature selection:")
+    print(vif_selected)
+
+    # Step 6: Build and Evaluate the Model
+    # Perform cross-validation
+    cv_results = cross_validate(logistic, X_selected, y, cv=StratifiedKFold(5),
+                                scoring=['accuracy', 'precision', 'recall', 'f1'], return_train_score=True)
+
+    # Calculate mean metrics
+    model_metrics = {
+        'mean_train_accuracy': np.mean(cv_results['train_accuracy']),
+        'mean_test_accuracy': np.mean(cv_results['test_accuracy']),
+        'mean_precision': np.mean(cv_results['test_precision']),
+        'mean_recall': np.mean(cv_results['test_recall']),
+        'mean_f1_score': np.mean(cv_results['test_f1'])
+    }
+    print("\nCross-Validation Metrics:")
+    for metric, value in model_metrics.items():
+        print(f"{metric}: {value:.4f}")
+
+    # Check for overfitting
+    train_acc = model_metrics['mean_train_accuracy']
+    test_acc = model_metrics['mean_test_accuracy']
+    if train_acc - test_acc > 0.05:
+        print("\nWarning: The model may be overfitting. Consider revising the model or gathering more data.")
+
+    # Fit the model on the entire training set
+    logistic_final = LogisticRegression(max_iter=1000, solver='liblinear', random_state=random_state)
+    logistic_final.fit(X_selected, y)
+
+    # Calculate Pseudo R-squared (McFadden's R²)
+    X_const = sm.add_constant(X_selected)
+    model_sm = sm.Logit(y, X_const)
+    result_sm = model_sm.fit(disp=False)
+    llf = result_sm.llf  # Log-likelihood of the fitted model
+    llnull = result_sm.llnull  # Log-likelihood of the null model
+    mcfadden_r2 = 1 - (llf / llnull)
+    print(f"\nMcFadden's R²: {mcfadden_r2:.4f}")
+
+    # Likelihood Ratio Test
+    lr_stat = -2 * (llnull - llf)
+    # Use chi2.sf from scipy.stats to calculate the p-value
+    lr_pvalue = chi2.sf(lr_stat, df=result_sm.df_model)
+    print(f"Likelihood Ratio Test: χ²={lr_stat:.4f}, p-value={lr_pvalue:.4f}")
+
+    # Step 7: Apply the model to the Prediction set
+    X_unknown_continuous = df_unknown[continuous_vars]
+    X_unknown_binary = df_unknown[binary_vars]
+
+    # Impute and scale continuous variables with index preservation
+    X_unknown_continuous_imputed = pd.DataFrame(imputer_continuous.transform(X_unknown_continuous),
+                                                index=X_unknown_continuous.index, columns=continuous_vars)
+    X_unknown_continuous_scaled = pd.DataFrame(scaler.transform(X_unknown_continuous_imputed),
+                                               index=X_unknown_continuous_imputed.index, columns=continuous_vars)
+
+    # Impute binary variables with index preservation
+    X_unknown_binary_imputed = pd.DataFrame(imputer_binary.transform(X_unknown_binary),
+                                            index=X_unknown_binary.index, columns=binary_vars)
+
+    # Combine continuous and binary variables
+    X_unknown_preprocessed = pd.concat([X_unknown_continuous_scaled, X_unknown_binary_imputed], axis=1)
+
+    # Select the same features
+    X_unknown_selected = X_unknown_preprocessed[selected_features]
+
+    # Predict probabilities and classes
+    unknown_probs = logistic_final.predict_proba(X_unknown_selected)[:, 1]
+    unknown_preds = logistic_final.predict(X_unknown_selected)
+
+    # Map predictions back to 'private' and 'share'
+    shape_predicted = pd.Series(unknown_preds, index=X_unknown_selected.index).map({1: 'simple', 0: 'complex'})
+
+    # Create a DataFrame with predictions
+    predictions_df = df_unknown.copy()
+    predictions_df['predicted_shape'] = shape_predicted.values
+    predictions_df['predicted_probability'] = unknown_probs
+
+    # Return results
+    return predictions_df, model_metrics, logistic_final, selected_features
 
